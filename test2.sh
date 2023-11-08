@@ -8,7 +8,7 @@
 #SBATCH --mem=30G
 #SBATCH --partition=nodes
 #SBATCH --gres=gpu:a100:1
-#SBATCH --chdir=/cluster/raid/home/vacy/LLMs
+#SBATCH --chdir=/cluster/raid/home/vacy/nutrition-chatbot
 
 # Initialize the shell to use local conda
 eval "$(conda shell.bash hook)"
