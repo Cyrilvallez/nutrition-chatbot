@@ -41,32 +41,51 @@ FEW_SHOT_RESPONSES = (
 
 class FewShotTemplate(object):
 
-    def __init__(self, shots: int = 6):
+    def __init__(self, shots: int = 6, instruct: bool = False):
 
         self.shots = shots if shots <= len(IMAGES) else len(IMAGES)
+        self.instruct = instruct
+        self.eou_token = "<end_of_utterance>"
         self.images = IMAGES
         self.instruction = FEW_SHOT_INSTRUCTION
         self.few_shot_responses = FEW_SHOT_RESPONSES
 
-    def get_prompt(self, image: str | Image.Image):
+    def get_prompt(self, image: str | Image.Image) -> list[str | Image.Image]:
         """Format the prompt with few-shot examples.
 
         Parameters
         ----------
         image : str | PIL.Image
             Image input to the model.
+
+        Returns
+        -------
+        list[str | Image.Image]
+            The formatted prompt.
         """
 
         prompt = []
         for i in range(self.shots + 1):
-            prompt.append('User:')
+            if i == 0:
+                prompt.append('User:')
+            else:
+                prompt.append('\nUser:')
             # few shot examples
             if i < self.shots:
                 prompt.append(self.images[i])
-                text = self.instruction + '\nAssistant: ' + self.few_shot_responses[i]
+                if self.instruct:
+                    text = [self.instruction + self.eou_token, '\nAssistant: ' + self.few_shot_responses[i] + self.eou_token]
+                else:
+                    text = [self.instruction + '\nAssistant: ' + self.few_shot_responses[i]]
             # actual user image prompt
             else:
                 prompt.append(image)
-                text = self.instruction + '\nAssistant:'
-            prompt.append(text)
+                if self.instruct:
+                    text = [self.instruction + self.eou_token, '\nAssistant:']
+                else:
+                    text = [self.instruction + '\nAssistant:']
+
+            prompt.extend(text)
+
+        return prompt
             
