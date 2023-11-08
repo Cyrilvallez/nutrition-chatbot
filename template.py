@@ -39,7 +39,9 @@ FEW_SHOT_RESPONSES = (
      "bell peppers, and mushrooms.\nThe estimated amount of calories for this meal is 200-500 kcal."),
 )
 
-class FewShotTemplate(object):
+
+
+class FewShotIdeficsTemplate(object):
 
     def __init__(self, shots: int = 6, instruct: bool = False):
 
@@ -74,18 +76,17 @@ class FewShotTemplate(object):
             if i < self.shots:
                 prompt.append(self.images[i])
                 if self.instruct:
-                    text = [self.instruction + self.eou_token, '\nAssistant: ' + self.few_shot_responses[i] + self.eou_token]
+                    text = self.instruction + self.eou_token + '\nAssistant: ' + self.few_shot_responses[i] + self.eou_token
                 else:
-                    text = [self.instruction + '\nAssistant: ' + self.few_shot_responses[i]]
+                    text = self.instruction + '\nAssistant: ' + self.few_shot_responses[i]
             # actual user image prompt
             else:
                 prompt.append(image)
                 if self.instruct:
-                    text = [self.instruction + self.eou_token, '\nAssistant:']
+                    text = self.instruction + self.eou_token + '\nAssistant:'
                 else:
-                    text = [self.instruction + '\nAssistant:']
+                    text = self.instruction + '\nAssistant:'
 
-            prompt.extend(text)
+            prompt.append(text)
 
         return prompt
-            

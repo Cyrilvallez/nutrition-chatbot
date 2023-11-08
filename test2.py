@@ -12,7 +12,7 @@ processor = AutoProcessor.from_pretrained(checkpoint)
 model = IdeficsForVisionText2Text.from_pretrained(checkpoint, torch_dtype=dtype, device_map="auto")
 
 gen_config = config.create_idefics_config(processor, max_new_tokens=500)
-prompt_template = template.FewShotTemplate(instruct=True)
+prompt_template = template.FewShotIdeficsTemplate(instruct=True)
 baseline = template.FEW_SHOT_INSTRUCTION
 
 test_image = Image.open('test_images/fish_chips.jpeg')
