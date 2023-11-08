@@ -13,12 +13,12 @@ class TextPatternStopping(StoppingCriteria):
     """Stop generation upon meeting any of the `stopping_patterns` or `extra_eos_tokens`.
     """
 
-    def __init__(self, prompt_ids_length: int, tokenizer: PreTrainedTokenizerBase,
+    def __init__(self, prompt_ids_length: int, processor,
                  stopping_patterns: list[str] | tuple[str] = IDEFICS_STOP_PATTERNS):
 
         super().__init__()
         self.prompt_ids_length = prompt_ids_length
-        self.tokenizer = tokenizer
+        self.processor = processor
         self.patterns = tuple(stopping_patterns)
 
         if len(self.patterns) == 0:
@@ -45,7 +45,7 @@ class TextPatternStopping(StoppingCriteria):
         """
 
         outputs = input_ids[:, self.prompt_ids_length:]
-        generated_sequences = self.tokenizer.batch_decode(outputs, skip_special_tokens=False)
+        generated_sequences = self.processor.batch_decode(outputs, skip_special_tokens=False)
         
         done_sequences = []
 
@@ -101,8 +101,8 @@ def post_process_stopping_patterns(prompt_truncated_generated_sequences: list[st
 
 
 
-def post_process_sequences(prompt_truncated_outputs: torch.Tensor, tokenizer: PreTrainedTokenizerBase,
-                           stopping_patterns: list[str] | tuple[str] | None) -> list[str]:
+def post_process_sequences(prompt_truncated_outputs: torch.Tensor, processor,
+                           stopping_patterns: list[str] | tuple[str] | None = IDEFICS_STOP_PATTERNS) -> list[str]:
     """Apply all steps of post-processing to the prompt-truncated outputs of a model.
 
     Parameters
@@ -121,9 +121,12 @@ def post_process_sequences(prompt_truncated_outputs: torch.Tensor, tokenizer: Pr
     """
 
     # Decode sequences
-    prompt_truncated_sequences = tokenizer.batch_decode(prompt_truncated_outputs, skip_special_tokens=True)
+    prompt_truncated_sequences = processor.batch_decode(prompt_truncated_outputs, skip_special_tokens=True)
     # Truncate according to the patterns
     final_sequences = post_process_stopping_patterns(prompt_truncated_sequences, stopping_patterns)
+
+    if len(final_sequences) == 1:
+        return final_sequences[0]
 
     return final_sequences
 
