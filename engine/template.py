@@ -41,13 +41,24 @@ FEW_SHOT_RESPONSES = (
 )
 
 
-LLAMA2_DEFAULT_SYSTEM_PROMPT = ("You are a helpful, respectful and honest assistant. Always answer as helpfully "
-                                "as possible, while being safe. Your answers should not include any harmful, "
-                                "unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that "
-                                "your responses are socially unbiased and positive in nature.\n\n"
-                                "If a question does not make any sense, or is not factually coherent, explain why "
-                                "instead of answering something not correct. If you don't know the answer to a "
-                                "question, please don't share false information.")
+LLAMA2_DEFAULT_SYSTEM_PROMPT = (
+    "You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. "
+    "Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. "
+    "Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make "
+    "any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't "
+    "know the answer to a question, please don't share false information."
+)
+
+
+LLAMA2_NUTRITION_SYSTEM_PROMPT = (
+    "You are a helpful, respectful, honest and world-renowned nutritionist. You provide advices to people on food "
+    "and nutrition, and how they impact health. You try to improve their lives by providing healthy food solutions "
+    "and recipes. If someone tells you about a specific health condition such as diabetes, obesity, underweight, or "
+    "food allergy, you always provide adequate advice. Your answers should not include any harmful, unethical, "
+    "racist, sexist, toxic, dangerous, or illegal content.\n\nIf a question does not make any sense, or is not "
+    "factually coherent, explain why instead of answering something not correct. If you don't know the answer to "
+    "a question, please don't share false information or advice."
+)
 
 
 
@@ -308,7 +319,7 @@ class GenericConversationTemplate(object):
 # reference: https://github.com/facebookresearch/llama/blob/1a240688810f8036049e8da36b073f63d2ac552c/llama/generation.py#L212
 class Llama2ChatConversationTemplate(GenericConversationTemplate):
 
-    def __init__(self, eos_token: str = '</s>', system_prompt: str = LLAMA2_DEFAULT_SYSTEM_PROMPT):
+    def __init__(self, eos_token: str = '</s>', system_prompt: str = LLAMA2_NUTRITION_SYSTEM_PROMPT):
 
         super().__init__(eos_token, system_prompt)
 
