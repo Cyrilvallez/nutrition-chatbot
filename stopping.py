@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from transformers import PreTrainedTokenizerBase, ProcessorMixin, StoppingCriteria
+from transformers import PreTrainedTokenizerBase, ProcessorMixin, StoppingCriteria, StoppingCriteriaList
 
 
 IDEFICS_STOP_PATTERNS = (
@@ -57,6 +57,17 @@ class TextPatternStopping(StoppingCriteria):
         return all(done_sequences)
         
         
+
+def create_stopping_criteria(prompt_ids_length: int, processor: ProcessorMixin | PreTrainedTokenizerBase,
+                             stopping_patterns: list[str] | tuple[str] | None) -> StoppingCriteriaList | None:
+    
+    if stopping_patterns is None or len(stopping_patterns) == 0:
+        return None
+    
+    criteria = TextPatternStopping(prompt_ids_length, processor, stopping_patterns)
+
+    return StoppingCriteriaList([criteria])
+
 
 
 def post_process_stopping_patterns(prompt_truncated_generated_sequences: list[str],
@@ -125,9 +136,6 @@ def post_process_sequences(prompt_truncated_outputs: torch.Tensor, processor: Pr
     prompt_truncated_sequences = processor.batch_decode(prompt_truncated_outputs, skip_special_tokens=True)
     # Truncate according to the patterns
     final_sequences = post_process_stopping_patterns(prompt_truncated_sequences, stopping_patterns)
-
-    if len(final_sequences) == 1:
-        return final_sequences[0]
 
     return final_sequences
 

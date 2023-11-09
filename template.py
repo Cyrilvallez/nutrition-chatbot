@@ -8,7 +8,7 @@ ROOT_FOLDER = os.path.dirname(__file__)
 # Path to the image folder
 IMAGE_FOLDER = os.path.join(ROOT_FOLDER, 'images')
 
-IMAGES = (
+FEW_SHOT_IMAGES = (
     Image.open(os.path.join(IMAGE_FOLDER, 'burger.jpeg')),
     Image.open(os.path.join(IMAGE_FOLDER, 'pizza.jpeg')),
     Image.open(os.path.join(IMAGE_FOLDER, 'mountain.jpeg')),
@@ -43,14 +43,24 @@ FEW_SHOT_RESPONSES = (
 
 class FewShotIdeficsTemplate(object):
 
-    def __init__(self, shots: int = 6, instruct: bool = False):
+    def __init__(self, shots: int | None = None, instruct: bool = False,
+                 images: list[str] | list[Image.Image] | None = FEW_SHOT_IMAGES, instruction: str = FEW_SHOT_INSTRUCTION,
+                 responses: list[str] | None = FEW_SHOT_RESPONSES):
 
-        self.shots = shots if shots <= len(IMAGES) else len(IMAGES)
+        self.images = images if images is not None else []
+        self.few_shot_responses = responses if responses is not None else []
+
+        if len(self.images) != len(self.few_shot_responses):
+            raise ValueError('The number of few shot images must match the number of few shot description of these images.')
+
+        if shots is None:
+            self.shots = len(self.images)
+        else:
+            self.shots = shots if shots <= len(self.images) else len(self.images)
+
         self.instruct = instruct
         self.eou_token = "<end_of_utterance>"
-        self.images = IMAGES
-        self.instruction = FEW_SHOT_INSTRUCTION
-        self.few_shot_responses = FEW_SHOT_RESPONSES
+        self.instruction = instruction
 
     def get_prompt(self, image: str | Image.Image) -> list[str | Image.Image]:
         """Format the prompt with few-shot examples.
