@@ -582,9 +582,9 @@ class Llama2ChatModel(object):
         return conv_history
     
 
-    def get_empty_conversation(self) -> template.GenericConversationTemplate:
+    def get_empty_conversation(self, system_prompt: str = template.LLAMA2_DEFAULT_SYSTEM_PROMPT) -> template.GenericConversationTemplate:
         """Return a new empty conversation with the template of the current model."""
-        return template.Llama2ChatConversationTemplate()
+        return template.Llama2ChatConversationTemplate(system_prompt=system_prompt)
     
 
     def get_context_size(self) -> int:

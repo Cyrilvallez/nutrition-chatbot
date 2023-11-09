@@ -41,6 +41,15 @@ FEW_SHOT_RESPONSES = (
 )
 
 
+LLAMA2_DEFAULT_SYSTEM_PROMPT = ("You are a helpful, respectful and honest assistant. Always answer as helpfully "
+                                "as possible, while being safe. Your answers should not include any harmful, "
+                                "unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that "
+                                "your responses are socially unbiased and positive in nature.\n\n"
+                                "If a question does not make any sense, or is not factually coherent, explain why "
+                                "instead of answering something not correct. If you don't know the answer to a "
+                                "question, please don't share false information.")
+
+
 
 class FewShotIdeficsTemplate(object):
 
@@ -108,14 +117,14 @@ class FewShotIdeficsTemplate(object):
 class GenericConversationTemplate(object):
     """Class used to store a conversation with a model."""
 
-    def __init__(self, eos_token: str):
+    def __init__(self, eos_token: str, system_prompt: str = ''):
 
         # Conversation history
         self.user_history_text = []
         self.model_history_text = []
 
         # system prompt
-        self.system_prompt = ''
+        self.system_prompt = system_prompt
 
         # eos token
         self.eos_token = eos_token
@@ -299,22 +308,15 @@ class GenericConversationTemplate(object):
 # reference: https://github.com/facebookresearch/llama/blob/1a240688810f8036049e8da36b073f63d2ac552c/llama/generation.py#L212
 class Llama2ChatConversationTemplate(GenericConversationTemplate):
 
-    def __init__(self, eos_token: str = '</s>'):
+    def __init__(self, eos_token: str = '</s>', system_prompt: str = LLAMA2_DEFAULT_SYSTEM_PROMPT):
 
-        super().__init__(eos_token)
+        super().__init__(eos_token, system_prompt)
 
         # Override value
         self.add_space_to_continuation_prompt = True
 
         self.bos_token = '<s>'
 
-        self.system_prompt = ("You are a helpful, respectful and honest assistant. Always answer as helpfully "
-                              "as possible, while being safe. Your answers should not include any harmful, "
-                              "unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that "
-                              "your responses are socially unbiased and positive in nature.\n\n"
-                              "If a question does not make any sense, or is not factually coherent, explain why "
-                              "instead of answering something not correct. If you don't know the answer to a "
-                              "question, please don't share false information.")
         self.system_template = '<<SYS>>\n{system_prompt}\n<</SYS>>\n\n'
 
         self.user_token = '[INST]'
