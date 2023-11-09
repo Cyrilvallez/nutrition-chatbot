@@ -4,11 +4,10 @@ import copy
 
 from PIL import Image
 
-# Path to the root of the project
-ROOT_FOLDER = os.path.dirname(__file__)
+from helpers import utils
 
 # Path to the image folder
-IMAGE_FOLDER = os.path.join(ROOT_FOLDER, 'images')
+IMAGE_FOLDER = os.path.join(utils.ROOT_FOLDER, 'few_shot_images')
 
 FEW_SHOT_IMAGES = (
     Image.open(os.path.join(IMAGE_FOLDER, 'burger.jpeg')),
