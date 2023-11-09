@@ -10,7 +10,7 @@ model_name = "idefics-9B"
 model = engine.IdeficsModel(model_name)
 
 
-test_image = Image.open('test_images/fish_chips.jpeg')
+test_image = Image.open('test_images/meme.jpeg')
 baseline = FEW_SHOT_INSTRUCTION
 baseline_prompt = [test_image, baseline]
 
