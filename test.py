@@ -1,5 +1,3 @@
-import torch
-from transformers import IdeficsForVisionText2Text, AutoProcessor, StoppingCriteriaList
 from PIL import Image
 
 import engine
