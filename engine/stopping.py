@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 from transformers import PreTrainedTokenizerBase, ProcessorMixin, StoppingCriteria, StoppingCriteriaList
 
 

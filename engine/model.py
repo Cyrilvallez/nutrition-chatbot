@@ -2,10 +2,10 @@ from PIL import Image
 
 import torch
 
-import loader
-import template
-import config
-import stopping
+from engine import loader
+from engine import template
+from engine import config
+from engine import stopping
 
 
 class IdeficsModel(object):

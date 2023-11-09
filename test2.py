@@ -1,18 +1,16 @@
-import torch
-from transformers import IdeficsForVisionText2Text, AutoProcessor, StoppingCriteriaList
 from PIL import Image
 
-import model
-import template
+import engine
+from engine.template import FEW_SHOT_INSTRUCTION
 
 model_name = "idefics-9B-instruct"
 
-model_ = model.IdeficsModel(model_name)
+model_ = engine.IdeficsModel(model_name)
 
 test_image = Image.open('test_images/fish_chips.jpeg')
 
 
-baseline = template.FEW_SHOT_INSTRUCTION
+baseline = FEW_SHOT_INSTRUCTION
 baseline_prompt = ["User:", test_image, baseline + "<end_of_utterance>", "\nAssistant:"]
 
 

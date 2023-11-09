@@ -2,16 +2,16 @@ import torch
 from transformers import IdeficsForVisionText2Text, AutoProcessor, StoppingCriteriaList
 from PIL import Image
 
-import model
-import template
+import engine
+from engine.template import FEW_SHOT_INSTRUCTION
 
 model_name = "idefics-9B"
 
-model_ = model.IdeficsModel(model_name)
+model_ = engine.IdeficsModel(model_name)
 
 
 test_image = Image.open('test_images/fish_chips.jpeg')
-baseline = template.FEW_SHOT_INSTRUCTION
+baseline = FEW_SHOT_INSTRUCTION
 baseline_prompt = [test_image, baseline]
 
 baseline_output = model_.generate_text(baseline_prompt)
