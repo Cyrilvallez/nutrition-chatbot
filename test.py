@@ -6,8 +6,8 @@ import config
 import template
 import stopping
 
-# checkpoint = "HuggingFaceM4/idefics-9b"
-checkpoint = "HuggingFaceM4/idefics-80b"
+checkpoint = "HuggingFaceM4/idefics-9b"
+# checkpoint = "HuggingFaceM4/idefics-80b"
 dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
 
 processor = AutoProcessor.from_pretrained(checkpoint)
