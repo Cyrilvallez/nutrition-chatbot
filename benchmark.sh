@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=test
+#SBATCH --job-name=benchmark
 #SBATCH --output=%x-%j.out
 #SBATCH --error=%x-%j.err
 #SBATCH --time=3-00:00:00
@@ -16,6 +16,6 @@ eval "$(conda shell.bash hook)"
 # Activate (local) env
 conda activate llm
 
-python3 -u test2.py
+python3 -u benchmark.py
 
 conda deactivate
