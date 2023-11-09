@@ -34,8 +34,8 @@ baseline_criteria = StoppingCriteriaList([stopping.TextPatternStopping(few_shot_
 few_shot_ids = model.generate(**few_shot_input, generation_config=gen_config, stopping_criteria=few_shot_criteria)
 baseline_ids = model.generate(**baseline_input, generation_config=gen_config, stopping_criteria=baseline_criteria)
 
-few_shot_output = few_shot_ids[:, few_shot_input_length]
-baseline_output = baseline_ids[:, baseline_input_length]
+few_shot_output = few_shot_ids[:, few_shot_input_length:]
+baseline_output = baseline_ids[:, baseline_input_length:]
 
 few_shot_output = stopping.post_process_sequences(few_shot_output, processor)
 baseline_output = stopping.post_process_sequences(baseline_output, processor)

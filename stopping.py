@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from transformers import PreTrainedTokenizerBase, StoppingCriteria
+from transformers import PreTrainedTokenizerBase, ProcessorMixin, StoppingCriteria
 
 
 IDEFICS_STOP_PATTERNS = (
@@ -10,19 +10,16 @@ IDEFICS_STOP_PATTERNS = (
 
 
 class TextPatternStopping(StoppingCriteria):
-    """Stop generation upon meeting any of the `stopping_patterns` or `extra_eos_tokens`.
+    """Stop generation upon meeting any of the `stopping_patterns`.
     """
 
-    def __init__(self, prompt_ids_length: int, processor,
+    def __init__(self, prompt_ids_length: int, processor: ProcessorMixin | PreTrainedTokenizerBase,
                  stopping_patterns: list[str] | tuple[str] = IDEFICS_STOP_PATTERNS):
 
         super().__init__()
         self.prompt_ids_length = prompt_ids_length
         self.processor = processor
         self.patterns = tuple(stopping_patterns)
-
-        if len(self.patterns) == 0:
-            raise ValueError('You did not provide any patterns upon which to stop generation.')
 
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
@@ -43,6 +40,10 @@ class TextPatternStopping(StoppingCriteria):
         bool
             `True` if all sequences are done being generated, `False` otherwise.
         """
+
+        # If this was initialized without patterns immediately return False
+        if len(self.patterns) == 0:
+            return False
 
         outputs = input_ids[:, self.prompt_ids_length:]
         generated_sequences = self.processor.batch_decode(outputs, skip_special_tokens=False)
@@ -101,7 +102,7 @@ def post_process_stopping_patterns(prompt_truncated_generated_sequences: list[st
 
 
 
-def post_process_sequences(prompt_truncated_outputs: torch.Tensor, processor,
+def post_process_sequences(prompt_truncated_outputs: torch.Tensor, processor: ProcessorMixin | PreTrainedTokenizerBase,
                            stopping_patterns: list[str] | tuple[str] | None = IDEFICS_STOP_PATTERNS) -> list[str]:
     """Apply all steps of post-processing to the prompt-truncated outputs of a model.
 
@@ -109,8 +110,8 @@ def post_process_sequences(prompt_truncated_outputs: torch.Tensor, processor,
     ----------
     prompt_truncated_outputs : torch.Tensor
         The PROMPT-TRUNCATED output of a model. Passing the full outputs may induce errors in the logic.
-    tokenizer : PreTrainedTokenizerBase
-        The tokenizer used by the model.
+    processor : ProcessorMixin | PreTrainedTokenizerBase
+        The processor or tokenizer used by the model.
     stopping_patterns : list[str] | tuple[tr] | None,
         The list of patterns to use to stop generation.
 
