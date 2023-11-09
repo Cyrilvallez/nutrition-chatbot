@@ -13,4 +13,4 @@ completions = {}
 for img, name in image_dataset:
     completions[name] = model.process_image(img)
 
-utils.save_jsonl(completions, f'meal_dataset_{model_name}.jsonl')
+utils.save_json(completions, f'meal_dataset_{model_name}.json')

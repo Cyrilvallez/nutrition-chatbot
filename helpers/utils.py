@@ -150,6 +150,11 @@ def save_jsonl(dictionaries: list[dict], filename: str, append: bool = False):
         Whether to append at the end of the file or create a new one, default to False.
     """
 
+    if isinstance(dictionaries, dict):
+        print('You provided a single dictionary. This will be saved as a json file')
+        save_json(dictionaries, filename)
+        return
+
     filename = validate_filename(filename, extension='jsonl')
 
     mode = 'a' if append else 'w'
