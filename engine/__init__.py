@@ -1,1 +1,1 @@
-from engine.model import IdeficsModel
+from engine.model import IdeficsModel, Llama2ChatModel

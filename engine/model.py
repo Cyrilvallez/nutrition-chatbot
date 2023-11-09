@@ -599,7 +599,7 @@ class Llama2ChatModel(object):
 
         Parameters
         ----------
-        conversation : GenericConversation
+        conversation : template.GenericConversationTemplate
             The current conversation.
         max_new_tokens : int
             How many new tokens to generate.
@@ -608,7 +608,7 @@ class Llama2ChatModel(object):
 
         Returns
         -------
-        GenericConversation
+        template.GenericConversationTemplate
             The truncated conversation.
         """
 
