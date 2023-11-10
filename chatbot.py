@@ -141,7 +141,7 @@ def continue_generation(conversation: GenericConversationTemplate, gradio_output
     # If we just uploaded an image, do nothing
     if conversation.user_history_text[-1].startswith(LLAMA2_USER_TRANSITION) and \
         conversation.model_history_text[-1].startswith(LLAMA2_MODEL_TRANSITION):
-        return conversation, conversation.to_gradio_format()
+        return conversation, gradio_output, gradio_output
    
     timeout = 20
 
@@ -438,7 +438,8 @@ with demo:
     
     # Load an image to the image component
     upload_event = upload_button.upload(upload_image, inputs=[upload_button, conversation, gradio_output],
-                                        outputs=[conversation, chatbot, gradio_output])
+                                        outputs=[conversation, chatbot, gradio_output],
+                                        cancels=[generate_event1, generate_event2])
     
     # Add automatic callback on success (args[-1] is the username)
     upload_event.success(lambda *args: LOGGERS[args[-1]].flag(args, flag_option=f'image_upload'),
