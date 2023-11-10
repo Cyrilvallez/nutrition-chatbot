@@ -151,7 +151,7 @@ def continue_generation(conversation: GenericConversationTemplate, additional_ma
                 conv_copy.model_history_text[-1] = generated_text
                 # The first output is an empty string to clear the input box, the second is the format output
                 # to use in a gradio chatbot component
-                yield conversation, '', conv_copy.to_gradio_format()
+                yield conversation, conv_copy.to_gradio_format()
 
         # If for some reason the queue (from the streamer) is still empty after timeout, we probably
         # encountered an exception
@@ -263,8 +263,8 @@ max_new_tokens = gr.Slider(32, 4096, value=512, step=32, label='Max new tokens',
                            info='Maximum number of new tokens to generate.')
 max_additional_new_tokens = gr.Slider(16, 512, value=128, step=16, label='Max additional new tokens',
                            info='Maximum number of new tokens to generate when using "Continue last answer" feature.')
-do_sample = gr.Checkbox(value=True, label='Sampling', info=('Whether to incorporate randomness in generation. '
-                                                            'If not selected, perform greedy search.'))
+do_sample = gr.Checkbox(value=True, label='Random sampling', info=('Whether to incorporate randomness in generation. '
+                                                                   'If not selected, perform greedy search.'))
 top_k = gr.Slider(0, 200, value=50, step=5, label='Top-k',
                info='How many tokens with max probability to consider. 0 to deactivate.')
 top_p = gr.Slider(0, 1, value=0.90, step=0.01, label='Top-p',
@@ -344,13 +344,12 @@ with demo:
             # Accordion for generation parameters
             with gr.Accordion("Text generation parameters", open=False):
                 do_sample.render()
-                with gr.Row():
+                with gr.Group():
                     max_new_tokens.render()
                     max_additional_new_tokens.render()
-                with gr.Row():
+                with gr.Group():
                     top_k.render()
                     top_p.render()
-                with gr.Row():
                     temperature.render()
 
 
@@ -377,6 +376,10 @@ with demo:
     loading_events = demo.load(loading, outputs=[conversation, conv_id, username, output])
     loading_events.then(lambda username: LOGGERS[username].setup(inputs_to_callback, flagging_dir=f'chatbot_logs/{username}'),
                         inputs=username)
+    
+    # Change visibility of generation parameters if we perform greedy search
+    do_sample.input(lambda value: [gr.update(visible=value) for _ in range(3)], inputs=do_sample,
+                    outputs=[top_k, top_p, temperature])
 
 
 if __name__ == '__main__':
