@@ -1,41 +1,50 @@
 import os
 import queue
 import copy
+import tempfile
+from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
 from transformers import TextIteratorStreamer
 import gradio as gr
 
 from engine import IdeficsModel, Llama2ChatModel, TextContinuationStreamer, GenericConversationTemplate
-from engine.template import LLAMA2_NUTRITION_SYSTEM_PROMPT
+from engine.model import DummyModel
+from engine.template import LLAMA2_NUTRITION_SYSTEM_PROMPT, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION, parse_idefics_output
 from helpers import utils
 
 # Load both models at the beginning
 IDEFICS_VERSION = 'idefics-9B'
-IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0)
+# IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0)
+IDEFICS = DummyModel()
 
 LLAMA2_VERSION = 'llama2-13B-chat'
-LLAMA2 = Llama2ChatModel(LLAMA2_VERSION, gpu_rank=1)
+# LLAMA2 = Llama2ChatModel(LLAMA2_VERSION, gpu_rank=1)
+LLAMA2 = DummyModel()
 
 # File where the valid credentials are stored
 CREDENTIALS_FILE = os.path.join(utils.ROOT_FOLDER, '.gradio_login.txt')
 
 # This will be a mapping between users and current conversation, to reload them with page reload
 CACHED_CONVERSATIONS = {}
+# This will be a mapping between users and current outputs, to reload them with page reload
+CACHED_OUTPUTS = {}
 
 # Need to define one logger per user
 LOGGERS = {}
 
 
-def chat_generation(conversation: GenericConversationTemplate, prompt: str, max_new_tokens: int,
-                    do_sample: bool, top_k: int, top_p: float,
-                    temperature: float) -> tuple[GenericConversationTemplate, str, list[list[str, str]]]:
+def chat_generation(conversation: GenericConversationTemplate, gradio_output: list[list], prompt: str,
+                    max_new_tokens: int, do_sample: bool, top_k: int, top_p: float,
+                    temperature: float) -> tuple[GenericConversationTemplate, str, list[list], list[list]]:
     """Chat generation with streamed output.
 
     Parameters
     ----------
     conversation : GenericConversation
         Current conversation. This is the value inside a gr.State instance.
+    gradio_output : list[list]
+        Current conversation to be displayed. This is the value inside a gr.State instance.
     prompt : str
         Prompt to the model.
     max_new_tokens : int
@@ -52,8 +61,8 @@ def chat_generation(conversation: GenericConversationTemplate, prompt: str, max_
 
     Yields
     ------
-    Iterator[tuple[GenericConversation, str, list[list[str, str]]]]
-        Corresponds to the tuple of components (conversation, prompt, output)
+    Iterator[tuple[GenericConversation, str, list[list]
+        Corresponds to the tuple of components (conversation, prompt, chatbot, gradio_output)
     """
 
     timeout = 20
@@ -61,8 +70,8 @@ def chat_generation(conversation: GenericConversationTemplate, prompt: str, max_
     # To show text as it is being generated
     streamer = TextIteratorStreamer(LLAMA2.tokenizer, skip_prompt=True, timeout=timeout, skip_special_tokens=True)
 
-    conv_copy = copy.deepcopy(conversation)
-    conv_copy.append_user_message(prompt)
+    output_copy = copy.deepcopy(gradio_output)
+    output_copy.append([prompt, None])
     
     # We need to launch a new thread to get text from the streamer in real-time as it is being generated. We
     # use an executor because it makes it easier to catch possible exceptions
@@ -79,10 +88,10 @@ def chat_generation(conversation: GenericConversationTemplate, prompt: str, max_
             for new_text in streamer:
                 generated_text += new_text
                 # Update model answer (on a copy of the conversation) as it is being generated
-                conv_copy.model_history_text[-1] = generated_text
+                output_copy[-1][1] = generated_text
                 # The first output is an empty string to clear the input box, the second is the format output
                 # to use in a gradio chatbot component
-                yield conversation, '', conv_copy.to_gradio_format()
+                yield conversation, '', output_copy, output_copy
 
         # If for some reason the queue (from the streamer) is still empty after timeout, we probably
         # encountered an exception
@@ -92,15 +101,17 @@ def chat_generation(conversation: GenericConversationTemplate, prompt: str, max_
                 raise gr.Error(f'The following error happened during generation: {repr(e)}')
             else:
                 raise gr.Error(f'Generation timed out (no new tokens were generated after {timeout} s)')
-    
+            
+    # Update the component with the final value
+    gradio_output.append(conversation.get_last_turn())
     
     # Update the chatbot with the real conversation (which may be slightly different due to postprocessing)
-    yield conversation, '', conversation.to_gradio_format()
+    yield conversation, '', gradio_output, gradio_output
 
 
 
-def continue_generation(conversation: GenericConversationTemplate, additional_max_new_tokens: int,
-                        do_sample: bool, top_k: int, top_p: float,
+def continue_generation(conversation: GenericConversationTemplate, gradio_output: list[list],
+                        additional_max_new_tokens: int, do_sample: bool, top_k: int, top_p: float,
                         temperature: float) -> tuple[GenericConversationTemplate, list[list[str, str]]]:
     """Continue the last turn of the conversation, with streamed output.
 
@@ -108,6 +119,8 @@ def continue_generation(conversation: GenericConversationTemplate, additional_ma
     ----------
     conversation : GenericConversation
         Current conversation. This is the value inside a gr.State instance.
+    gradio_output : list[list]
+        Current conversation to be displayed. This is the value inside a gr.State instance.
     additional_max_new_tokens : int
         Maximum new tokens to generate.
     do_sample : bool
@@ -123,15 +136,20 @@ def continue_generation(conversation: GenericConversationTemplate, additional_ma
     Yields
     ------
     Iterator[tuple[GenericConversation, list[list[str, str]]]]
-        Corresponds to the tuple of components (conversation, output)
+        Corresponds to the tuple of components (conversation, chatbot, gradio_output)
     """
+
+    # If we just uploaded an image, do nothing
+    if conversation.user_history_text[-1].startswith(LLAMA2_USER_TRANSITION) and \
+        conversation.model_history_text[-1].startswith(LLAMA2_MODEL_TRANSITION):
+        return conversation, conversation.to_gradio_format()
    
     timeout = 20
 
     # To show text as it is being generated
     streamer = TextContinuationStreamer(LLAMA2.tokenizer, skip_prompt=True, timeout=timeout, skip_special_tokens=True)
 
-    conv_copy = copy.deepcopy(conversation)
+    output_copy = copy.deepcopy(gradio_output)
     
     # We need to launch a new thread to get text from the streamer in real-time as it is being generated. We
     # use an executor because it makes it easier to catch possible exceptions
@@ -144,14 +162,14 @@ def continue_generation(conversation: GenericConversationTemplate, additional_ma
         
         # Get results from the streamer and yield it
         try:
-            generated_text = conv_copy.model_history_text[-1]
+            generated_text = output_copy[-1][1]
             for new_text in streamer:
                 generated_text += new_text
                 # Update model answer (on a copy of the conversation) as it is being generated
-                conv_copy.model_history_text[-1] = generated_text
+                output_copy[-1][1] = generated_text
                 # The first output is an empty string to clear the input box, the second is the format output
                 # to use in a gradio chatbot component
-                yield conversation, conv_copy.to_gradio_format()
+                yield conversation, output_copy, output_copy
 
         # If for some reason the queue (from the streamer) is still empty after timeout, we probably
         # encountered an exception
@@ -162,9 +180,46 @@ def continue_generation(conversation: GenericConversationTemplate, additional_ma
             else:
                 raise gr.Error(f'Generation timed out (no new tokens were generated after {timeout} s)')
     
+    # Update the component with the final value
+    gradio_output[-1][1] = conversation.model_history_text[-1]
     
     # Update the chatbot with the real conversation (which may be slightly different due to postprocessing)
-    yield conversation, conversation.to_gradio_format()
+    yield conversation, gradio_output, gradio_output
+
+
+
+def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversationTemplate,
+                 gradio_output: list[list]) -> tuple[GenericConversationTemplate, list[list], list[list]]:
+    """Load the uploaded image, process it, and feed output to Llama2.
+
+    Parameters
+    ----------
+    file : tempfile.TemporaryFile
+        The file as returned by the UploadButton.
+
+    Returns
+    -------
+        Corresponds to the tuple of components (conversation, chatbot, gradio_output)
+    """
+
+    image = Image.open(file.name). convert('RGB')
+
+    try:
+        out = IDEFICS.process_image(image)
+        parsed_output = parse_idefics_output(out)
+    except BaseException as e:
+        raise gr.Error(f'The following error happened during image processing: {repr(e)}. Please choose another image.')
+
+    if parsed_output['is_food']:
+        conversation.append_user_message(LLAMA2_USER_TRANSITION + parsed_output['text'])
+        conversation.append_model_message(LLAMA2_MODEL_TRANSITION)
+        gradio_output.append([(file.name,), 'Thank you for this image! How can I help you?'])
+    else:
+        gr.Warning("The image you just uploaded does not depict food. We only allow images of meals or "
+                   "beverages.")
+        gradio_output.append([(file.name,), 'Thank you for this image! How can I help you?'])
+        
+    return conversation, gradio_output, gradio_output
 
 
 
@@ -201,6 +256,7 @@ def authentication(username: str, password: str) -> bool:
     return False
     
 
+
 def clear_chatbot(username: str) -> tuple[GenericConversationTemplate, str, list[list[str]]]:
     """Erase the conversation history and reinitialize the elements.
 
@@ -212,18 +268,20 @@ def clear_chatbot(username: str) -> tuple[GenericConversationTemplate, str, list
     Returns
     -------
     tuple[GenericConversation, str, list[list[str]]]
-        Corresponds to the tuple of components (conversation, conv_id, output)
+        Corresponds to the tuple of components (conversation, conv_id, chatbot, gradio_output)
     """
 
     # Create new global conv object (we need a new unique id)
     conversation = LLAMA2.get_empty_conversation(system_prompt=LLAMA2_NUTRITION_SYSTEM_PROMPT)
+    gradio_output = []
     # Cache value
     CACHED_CONVERSATIONS[username] = conversation
-    return conversation, conversation.id, conversation.to_gradio_format()
+    CACHED_OUTPUTS[username] = gradio_output
+    return conversation, conversation.id, gradio_output, gradio_output
 
 
 
-def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str, list[list[str]]]:
+def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str, list[list], list[list]]:
     """Retrieve username and all cached values at load time, and set the elements to the correct values.
 
     Parameters
@@ -234,7 +292,7 @@ def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str,
     Returns
     -------
     tuple[GenericConversation, str, str, list[list[str]]]
-        Corresponds to the tuple of components (conversation, conv_id, username, output)
+        Corresponds to the tuple of components (conversation, conv_id, username, chatbot, gradio_output)
     """
 
     # Retrieve username
@@ -246,15 +304,18 @@ def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str,
     # Check if we have cached a value for the conversation to use
     if username in CACHED_CONVERSATIONS.keys():
         actual_conv = CACHED_CONVERSATIONS[username]
+        actual_output = CACHED_OUTPUTS[username]
     else:
         actual_conv = LLAMA2.get_empty_conversation(system_prompt=LLAMA2_NUTRITION_SYSTEM_PROMPT)
+        actual_output = []
         CACHED_CONVERSATIONS[username] = actual_conv
+        CACHED_OUTPUTS[username] = actual_output
         LOGGERS[username] = gr.CSVLogger()
 
     conv_id = actual_conv.id
     
-    return actual_conv, conv_id, username, actual_conv.to_gradio_format()
-    
+    return actual_conv, conv_id, username, actual_output, actual_output
+ 
 
 
 
@@ -273,32 +334,36 @@ temperature = gr.Slider(0, 1, value=0.8, step=0.01, label='Temperature',
                         info='How to cool down the probability distribution.')
 
 
-# Define elements of the chatbot Tab
+# Define elements of the chatbot
 prompt = gr.Textbox(placeholder='Write your prompt here.', label='Prompt', lines=2)
-output = gr.Chatbot(label='Conversation')
-generate_button = gr.Button('Generate text', variant='primary')
-continue_button = gr.Button('Continue last answer', variant='primary')
-clear_button = gr.Button('Clear conversation')
+chatbot = gr.Chatbot(label='Conversation', height=750)
+generate_button = gr.Button('▶️ Submit', variant='primary')
+continue_button = gr.Button('🔂 Continue last answer', variant='primary')
+clear_button = gr.Button('🧹 Clear conversation')
+upload_button = gr.UploadButton("📁 Upload image", file_types=['image'])
 
 
 # State variable to keep one conversation per session (default value does not matter here -> it will be set
 # by loading() method anyway)
 conversation = gr.State(LLAMA2.get_empty_conversation())
+# This is a duplicate of the chatbot value, to be able to reload it if we reload the page
+gradio_output = gr.State([])
 
 
 # Define NON-VISIBLE elements: they are only used to keep track of variables and save them to the callback.
 username = gr.Textbox('', label='Username', visible=False)
 conv_id = gr.Textbox('', label='Conversation id', visible=False)
+image = gr.Image(type='pil', label='Image input', visible=False)
 
 
 # Define the inputs for the main inference
-inputs_to_generation = [conversation, prompt, max_new_tokens, do_sample, top_k, top_p, temperature]
+inputs_to_generation = [conversation, gradio_output, prompt, max_new_tokens, do_sample, top_k, top_p, temperature]
 
-inputs_to_continuation = [conversation, max_additional_new_tokens, do_sample, top_k, top_p, temperature]
+inputs_to_continuation = [conversation, gradio_output, max_additional_new_tokens, do_sample, top_k, top_p, temperature]
 
 # Define inputs for the logging callbacks
 inputs_to_callback = [max_new_tokens, max_additional_new_tokens, do_sample, top_k, top_p, temperature,
-                      output, conv_id, username]
+                      chatbot, conv_id, username]
 
 
 # Some prompt examples
@@ -318,10 +383,12 @@ with demo:
 
     # State variable
     conversation.render()
+    gradio_output.render()
 
     # Variables we track with usual components: they do not need to be State variables -- will not be visible
     conv_id.render()
     username.render()
+    image.render()
 
     # Need to wrap everything in a row because we want two side-by-side columns
     with gr.Row():
@@ -333,7 +400,8 @@ with demo:
                 generate_button.render()
                 clear_button.render()
                 continue_button.render()
-            output.render()
+            upload_button.render()
+            chatbot.render()
 
             gr.Markdown("### Prompt Examples")
             gr.Examples(prompt_examples, inputs=prompt)
@@ -355,7 +423,7 @@ with demo:
 
     # Perform chat generation when clicking the button
     generate_event1 = generate_button.click(chat_generation, inputs=inputs_to_generation,
-                                            outputs=[conversation, prompt, output])
+                                            outputs=[conversation, prompt, chatbot, gradio_output])
 
     # Add automatic callback on success (args[-1] is the username)
     generate_event1.success(lambda *args: LOGGERS[args[-1]].flag(args, flag_option=f'generation'),
@@ -363,23 +431,32 @@ with demo:
     
     # Continue generation when clicking the button
     generate_event2 = continue_button.click(continue_generation, inputs=inputs_to_continuation,
-                                            outputs=[conversation, output])
+                                            outputs=[conversation, chatbot, gradio_output])
     
     # Add automatic callback on success (args[-1] is the username)
     generate_event2.success(lambda *args: LOGGERS[args[-1]].flag(args, flag_option=f'continuation'),
                             inputs=inputs_to_callback, preprocess=False)
     
-    # Clear the output box when clicking the button
-    clear_button.click(clear_chatbot, inputs=[username], outputs=[conversation, conv_id, output])
+    # Load an image to the image component
+    upload_event = upload_button.upload(upload_image, inputs=[upload_button, conversation, gradio_output],
+                                        outputs=[conversation, chatbot, gradio_output])
+    
+    # Add automatic callback on success (args[-1] is the username)
+    upload_event.success(lambda *args: LOGGERS[args[-1]].flag(args, flag_option=f'image_upload'),
+                         inputs=inputs_to_callback, preprocess=False)
+    
+    # Clear the chatbot box when clicking the button
+    clear_button.click(clear_chatbot, inputs=[username], outputs=[conversation, conv_id, chatbot, gradio_output],
+                       queue=False)
     
     # Correctly set all variables and callback at load time
-    loading_events = demo.load(loading, outputs=[conversation, conv_id, username, output])
+    loading_events = demo.load(loading, outputs=[conversation, conv_id, username, chatbot, gradio_output], queue=False)
     loading_events.then(lambda username: LOGGERS[username].setup(inputs_to_callback, flagging_dir=f'chatbot_logs/{username}'),
-                        inputs=username)
+                        inputs=username, queue=False)
     
     # Change visibility of generation parameters if we perform greedy search
     do_sample.input(lambda value: [gr.update(visible=value) for _ in range(3)], inputs=do_sample,
-                    outputs=[top_k, top_p, temperature])
+                    outputs=[top_k, top_p, temperature], queue=False)
 
 
 if __name__ == '__main__':

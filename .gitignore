@@ -2,3 +2,4 @@
 test.ipynb
 __pycache__
 .gradio_login.txt
+chatbot_logs

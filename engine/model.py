@@ -640,3 +640,103 @@ class Llama2ChatModel(object):
             input_length = input.shape[-1]
 
         return new_conv
+    
+
+
+class DummyModel(object):
+    """Dummy model only used for debugging purposes on the chatbot."""
+
+    def __init__(self):
+        self.tokenizer = 'dummy_tokenizer_attribute'
+
+    def generate_text(
+            self,
+            prompt: str,
+            max_new_tokens: int = 512,
+            min_new_tokens: int | None = None,
+            do_sample: bool = True,
+            top_k: int | None = 50,
+            top_p: float | None = 0.9,
+            temperature: float = 0.8,
+            seed: int | None = None,
+            stopping_patterns: list[str] | tuple[str] | None = None,
+            truncate_prompt_from_output: bool = True,
+            post_process_output: bool = True,
+            **kwargs
+        ) -> str | list[str]:
+        
+        return 'This is a test'
+        
+
+
+    def generate_conversation(
+            self,
+            prompt: str,
+            system_prompt: str | None = None,
+            conv_history: template.GenericConversationTemplate | None = None,
+            max_new_tokens: int = 512,
+            min_new_tokens: int | None = None,
+            do_sample: bool = True,
+            top_k: int = 50,
+            top_p: float = 0.9,
+            temperature: float = 0.8,
+            seed: int | None = None,
+            stopping_patterns: list[str] | tuple[str] | None = None,
+            truncate_if_conv_too_long: bool = True,
+            **kwargs
+    ) -> template.GenericConversationTemplate:
+        
+        # Check that the history is not empty
+        if conv_history is None:
+            conv_history = self.get_empty_conversation()
+        # Add the prompt to the current conversation
+        conv_history.append_user_message(prompt)
+        conv_history.append_model_message('This is a test asnwer.')
+        return conv_history
+    
+
+    def continue_last_conversation_turn(
+            self,
+            conv_history: template.GenericConversationTemplate,
+            max_new_tokens: int = 128,
+            do_sample: bool = True,
+            top_k: int = 50,
+            top_p: float = 0.9,
+            temperature: float = 0.8,
+            seed: int | None = None,
+            stopping_patterns: list[str] | tuple[str] | None = None,
+            truncate_if_conv_too_long: bool = True,
+            **kwargs
+    ) -> template.GenericConversationTemplate:
+        
+        conv_history.append_to_last_model_message(' This is a continuation test asnwer.')
+        return conv_history
+    
+
+    def process_image(
+            self,
+            image: str | Image.Image,
+            shots: int | None = None,
+            few_shot_images: list[str | Image.Image] | None = template.FEW_SHOT_IMAGES,
+            few_shot_instruction: str | None = template.FEW_SHOT_INSTRUCTION,
+            few_shot_answers: list[str] | None = template.FEW_SHOT_RESPONSES,
+            max_new_tokens: int = 512,
+            min_new_tokens: int | None = None,
+            do_sample: bool = False,
+            top_k: int | None = 50,
+            top_p: float | None = 0.9,
+            temperature: float = 0.8,
+            seed: int | None = None,
+            stopping_patterns: list[str] | tuple[str] | None = stopping.IDEFICS_STOP_PATTERNS,
+            truncate_prompt_from_output: bool = True,
+            post_process_output: bool = True,
+            **kwargs
+        ) -> str:
+
+        return 'This is a test.'
+    
+
+    def get_empty_conversation(self, system_prompt: str = template.LLAMA2_NUTRITION_SYSTEM_PROMPT) -> template.GenericConversationTemplate:
+        """Return a new empty conversation with the template of the current model."""
+        return template.Llama2ChatConversationTemplate(system_prompt=system_prompt)
+    

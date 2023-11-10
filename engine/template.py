@@ -61,6 +61,17 @@ LLAMA2_NUTRITION_SYSTEM_PROMPT = (
 )
 
 
+LLAMA2_USER_TRANSITION = (
+    "I am going to describe an image of food or beverage to you that I just uploaded. Please take it into account "
+    "for all my subsequent requests. Here is the description, along with an estimation of the amount of calories "
+    "of the meal:\n"
+)
+
+LLAMA2_MODEL_TRANSITION = (
+    "Thank you for the description of the image you just uploaded. What can I do for you concerning the meal "
+    "on the image?"
+)
+
 
 class FewShotIdeficsTemplate(object):
 
@@ -122,6 +133,24 @@ class FewShotIdeficsTemplate(object):
 
         return prompt
     
+
+
+def parse_idefics_output(output: str) -> dict:
+
+    lines = output.strip().splitlines()
+    is_food = lines[0].startswith('Yes')
+
+    out = {'is_food': is_food}
+
+    if is_food:
+        assert len(lines) == 4, 'The output format is not correct'
+        out['meal'] = lines[1]
+        out['ingredients'] = lines[2]
+        out['calories'] = lines[3]
+
+        out['text'] = '\n'.join(lines[1:4])
+
+    return out
 
 
 
@@ -305,6 +334,11 @@ class GenericConversationTemplate(object):
         self.model_history_text = past_model_outputs
 
 
+    def get_last_turn(self) -> list[str, str]:
+        """Return the last conversation turn."""
+        return [self.user_history_text[-1], self.model_history_text[-1]]
+
+
     def to_gradio_format(self) -> list[list[str, str]]:
         """Convert the current conversation to gradio chatbot format.
         """
@@ -312,8 +346,9 @@ class GenericConversationTemplate(object):
         if len(self) == 0:
             return [[None, None]]
 
-        return [list(conv_turn) for conv_turn in self]
-        
+        # Do not show the "syntetic" conversation turns (fake turns that we use to add context)
+        return [list(conv_turn) for conv_turn in self if not (conv_turn[0].startswith(LLAMA2_USER_TRANSITION)
+                                                              and conv_turn[1].startswith(LLAMA2_MODEL_TRANSITION))]
 
 
 # reference: https://github.com/facebookresearch/llama/blob/1a240688810f8036049e8da36b073f63d2ac552c/llama/generation.py#L212
