@@ -28,18 +28,27 @@ LOGGERS = {}
 
 
 def chat_generation(conversation: GenericConversationTemplate, prompt: str, max_new_tokens: int,
-                    do_sample: bool, top_k: int | None, top_p: float | None,
+                    do_sample: bool, top_k: int, top_p: float,
                     temperature: float) -> tuple[GenericConversationTemplate, str, list[list[str, str]]]:
     """Chat generation with streamed output.
 
     Parameters
     ----------
-    prompt : str
-        Prompt to the model.
     conversation : GenericConversation
         Current conversation. This is the value inside a gr.State instance.
-    max_new_tokens : int, optional
-        Maximum new tokens to generate, by default 60
+    prompt : str
+        Prompt to the model.
+    max_new_tokens : int
+        Maximum new tokens to generate.
+    do_sample : bool
+        Whether to introduce randomness in the generation.
+    top_k : int
+        How many tokens with max probability to consider for randomness.
+    top_p : float
+        The probability density covering the new tokens to consider for randomness.
+    temperature : float
+        How to cool down the probability distribution. Value between 1 (no cooldown) and 0 (greedy search,
+        no randomness).
 
     Yields
     ------
@@ -91,7 +100,7 @@ def chat_generation(conversation: GenericConversationTemplate, prompt: str, max_
 
 
 def continue_generation(conversation: GenericConversationTemplate, additional_max_new_tokens: int,
-                        do_sample: bool, top_k: int | None, top_p: float | None,
+                        do_sample: bool, top_k: int, top_p: float,
                         temperature: float) -> tuple[GenericConversationTemplate, list[list[str, str]]]:
     """Continue the last turn of the conversation, with streamed output.
 
@@ -99,8 +108,17 @@ def continue_generation(conversation: GenericConversationTemplate, additional_ma
     ----------
     conversation : GenericConversation
         Current conversation. This is the value inside a gr.State instance.
-    max_new_tokens : int, optional
-        Maximum new tokens to generate, by default 60
+    additional_max_new_tokens : int
+        Maximum new tokens to generate.
+    do_sample : bool
+        Whether to introduce randomness in the generation.
+    top_k : int
+        How many tokens with max probability to consider for randomness.
+    top_p : float
+        The probability density covering the new tokens to consider for randomness.
+    temperature : float
+        How to cool down the probability distribution. Value between 1 (no cooldown) and 0 (greedy search,
+        no randomness).
 
     Yields
     ------
@@ -183,7 +201,7 @@ def authentication(username: str, password: str) -> bool:
     return False
     
 
-def clear_chatbot(username: str) -> tuple[GenericConversationTemplate, str, str, list[list[str]]]:
+def clear_chatbot(username: str) -> tuple[GenericConversationTemplate, str, list[list[str]]]:
     """Erase the conversation history and reinitialize the elements.
 
     Parameters
@@ -193,7 +211,7 @@ def clear_chatbot(username: str) -> tuple[GenericConversationTemplate, str, str,
 
     Returns
     -------
-    tuple[GenericConversation, str, str, list[list[str]]]
+    tuple[GenericConversation, str, list[list[str]]]
         Corresponds to the tuple of components (conversation, conv_id, output)
     """
 
@@ -205,7 +223,7 @@ def clear_chatbot(username: str) -> tuple[GenericConversationTemplate, str, str,
 
 
 
-def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str, str, str, list[list[str]]]:
+def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str, list[list[str]]]:
     """Retrieve username and all cached values at load time, and set the elements to the correct values.
 
     Parameters
@@ -215,7 +233,7 @@ def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str,
 
     Returns
     -------
-    tuple[GenericConversation, str, str, str, str, list[list[str]]]
+    tuple[GenericConversation, str, str, list[list[str]]]
         Corresponds to the tuple of components (conversation, conv_id, username, output)
     """
 
