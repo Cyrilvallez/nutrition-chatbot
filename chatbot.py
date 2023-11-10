@@ -5,6 +5,7 @@ import tempfile
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
+import torch
 from transformers import TextIteratorStreamer
 import gradio as gr
 
@@ -15,12 +16,10 @@ from helpers import utils
 
 # Load both models at the beginning
 IDEFICS_VERSION = 'idefics-9B'
-# IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0)
-IDEFICS = DummyModel()
+IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0) if torch.cuda.is_available() else DummyModel()
 
 LLAMA2_VERSION = 'llama2-13B-chat'
-# LLAMA2 = Llama2ChatModel(LLAMA2_VERSION, gpu_rank=1)
-LLAMA2 = DummyModel()
+LLAMA2 = Llama2ChatModel(LLAMA2_VERSION, gpu_rank=1) if torch.cuda.is_available() else DummyModel()
 
 # File where the valid credentials are stored
 CREDENTIALS_FILE = os.path.join(utils.ROOT_FOLDER, '.gradio_login.txt')
