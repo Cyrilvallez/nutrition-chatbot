@@ -335,7 +335,7 @@ temperature = gr.Slider(0, 1, value=0.8, step=0.01, label='Temperature',
 
 # Define elements of the chatbot
 prompt = gr.Textbox(placeholder='Write your prompt here.', label='Prompt', lines=2)
-chatbot = gr.Chatbot(label='Conversation', height=750)
+chatbot = gr.Chatbot(label='Conversation', height=500)
 generate_button = gr.Button('▶️ Submit', variant='primary')
 continue_button = gr.Button('🔂 Continue last answer', variant='primary')
 clear_button = gr.Button('🧹 Clear conversation')
@@ -389,35 +389,30 @@ with demo:
     username.render()
     image.render()
 
-    # Need to wrap everything in a row because we want two side-by-side columns
+    # Visible UI
+    gr.Markdown("# NutriBot: your nutritionist assistant")
+    chatbot.render()
+    prompt.render()
+
     with gr.Row():
+        generate_button.render()
+        clear_button.render()
+        continue_button.render()
+        upload_button.render()
 
-        with gr.Column(scale=5):
+    # Accordion for generation parameters
+    with gr.Accordion("Text generation parameters", open=False):
+        do_sample.render()
+        with gr.Group():
+            max_new_tokens.render()
+            max_additional_new_tokens.render()
+        with gr.Group():
+            top_k.render()
+            top_p.render()
+            temperature.render()
 
-            prompt.render()
-            with gr.Row():
-                generate_button.render()
-                clear_button.render()
-                continue_button.render()
-            upload_button.render()
-            chatbot.render()
-
-            gr.Markdown("### Prompt Examples")
-            gr.Examples(prompt_examples, inputs=prompt)
-
-        # Second column defines model selection and generation parameters
-        with gr.Column(scale=1):
-            
-            # Accordion for generation parameters
-            with gr.Accordion("Text generation parameters", open=False):
-                do_sample.render()
-                with gr.Group():
-                    max_new_tokens.render()
-                    max_additional_new_tokens.render()
-                with gr.Group():
-                    top_k.render()
-                    top_p.render()
-                    temperature.render()
+    gr.Markdown("### Prompt Examples")
+    gr.Examples(prompt_examples, inputs=prompt)
 
 
     # Perform chat generation when clicking the button
