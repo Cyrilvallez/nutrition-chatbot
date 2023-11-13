@@ -61,6 +61,12 @@ LLAMA2_NUTRITION_SYSTEM_PROMPT = (
 )
 
 
+LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = LLAMA2_NUTRITION_SYSTEM_PROMPT + (
+    "\n\nIn particular, you are giving advice to a {sex} of {age} years old, who weights {weight} kilograms and "
+    "measures {size} centimeters. {optional_medical_conditions}Tailor your answer to this specific person."
+)
+
+
 LLAMA2_USER_TRANSITION = (
     "I am going to describe an image of food or beverage to you that I just uploaded. Please take it into account "
     "for all my subsequent requests. Here is the description, along with an estimation of the amount of calories "
@@ -136,6 +142,18 @@ class FewShotIdeficsTemplate(object):
 
 
 def parse_idefics_output(output: str) -> dict:
+    """Parse output of idefics, according to the format we prompt.
+
+    Parameters
+    ----------
+    output : str
+        Output of idefics.
+
+    Returns
+    -------
+    dict
+        Parsed output.
+    """
 
     lines = output.strip().splitlines()
     is_food = lines[0].startswith('Yes')
@@ -151,6 +169,32 @@ def parse_idefics_output(output: str) -> dict:
         out['text'] = '\n'.join(lines[1:4])
 
     return out
+
+
+
+def get_custom_system_prompt(medical_conditions: dict, base_template: str = LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT) -> str:
+    """Create customized system prompt based on an individual medical conditions.
+
+    Parameters
+    ----------
+    medical_conditions : dict
+        The medical conditions
+    base_template : str, optional
+        The base template of the prompt, by default LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT
+
+    Returns
+    -------
+    str
+        The formatted system prompt.
+    """
+
+    pronoun = 'He' if medical_conditions['sex'] == 'male' else 'She'
+    special_conditions = f"{pronoun} has {medical_conditions['conditions']}. " if medical_conditions['conditions'] != '' else ''
+    system_prompt = base_template.format(age=medical_conditions['age'], size=medical_conditions['size'],
+                                         weight=medical_conditions['weight'], sex=medical_conditions['sex'],
+                                         optional_medical_conditions=special_conditions)
+    
+    return system_prompt
 
 
 

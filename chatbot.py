@@ -11,7 +11,7 @@ import gradio as gr
 
 from engine import IdeficsModel, Llama2ChatModel, TextContinuationStreamer, GenericConversationTemplate
 from engine.model import DummyModel
-from engine.template import LLAMA2_NUTRITION_SYSTEM_PROMPT, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION, parse_idefics_output
+from engine.template import LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION, parse_idefics_output, get_custom_system_prompt
 from helpers import utils
 
 # Load both models at the beginning
@@ -28,9 +28,14 @@ CREDENTIALS_FILE = os.path.join(utils.ROOT_FOLDER, '.gradio_login.txt')
 CACHED_CONVERSATIONS = {}
 # This will be a mapping between users and current outputs, to reload them with page reload
 CACHED_OUTPUTS = {}
+# This will be a mapping between users and current initial question answers, to reload them with page reload
+CACHED_QUESTION_ANSWERS = {}
 
 # Need to define one logger per user
 LOGGERS = {}
+
+# Path to NutriBot thumbnail
+THUMBNAIL = os.path.join(utils.ROOT_FOLDER, 'avatars', 'nutribot_cropped.png')
 
 
 def chat_generation(conversation: GenericConversationTemplate, gradio_output: list[list], prompt: str,
@@ -65,6 +70,12 @@ def chat_generation(conversation: GenericConversationTemplate, gradio_output: li
     """
 
     timeout = 20
+
+    if not torch.cuda.is_available():
+        out = LLAMA2.generate_conversation(prompt, conv_history=conversation)
+        gradio_output.append(conversation.get_last_turn())
+        print(gradio_output)
+        return conversation, '', gradio_output, gradio_output
 
     # To show text as it is being generated
     streamer = TextIteratorStreamer(LLAMA2.tokenizer, skip_prompt=True, timeout=timeout, skip_special_tokens=True)
@@ -270,17 +281,22 @@ def clear_chatbot(username: str) -> tuple[GenericConversationTemplate, str, list
         Corresponds to the tuple of components (conversation, conv_id, chatbot, gradio_output)
     """
 
-    # Create new global conv object (we need a new unique id)
-    conversation = LLAMA2.get_empty_conversation(system_prompt=LLAMA2_NUTRITION_SYSTEM_PROMPT)
+    # Get the system prompt from the cached medical conditions
+    medical_conditions = CACHED_QUESTION_ANSWERS[username]
+    system_prompt = get_custom_system_prompt(medical_conditions)
+    
+    # Create the new objects
+    conversation = LLAMA2.get_empty_conversation(system_prompt=system_prompt)
     gradio_output = []
     # Cache value
     CACHED_CONVERSATIONS[username] = conversation
     CACHED_OUTPUTS[username] = gradio_output
+
     return conversation, conversation.id, gradio_output, gradio_output
 
 
 
-def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str, list[list], list[list]]:
+def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str, list[list], list[list], dict, dict]:
     """Retrieve username and all cached values at load time, and set the elements to the correct values.
 
     Parameters
@@ -290,8 +306,8 @@ def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str,
 
     Returns
     -------
-    tuple[GenericConversation, str, str, list[list[str]]]
-        Corresponds to the tuple of components (conversation, conv_id, username, chatbot, gradio_output)
+    tuple[GenericConversation, str, str, list[list[str]], dict, dict]
+        Corresponds to the tuple of components (conversation, conv_id, username, chatbot, gradio_output, initial_ui, main_ui)
     """
 
     # Retrieve username
@@ -304,18 +320,78 @@ def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str,
     if username in CACHED_CONVERSATIONS.keys():
         actual_conv = CACHED_CONVERSATIONS[username]
         actual_output = CACHED_OUTPUTS[username]
+
+        medical_conditions = CACHED_QUESTION_ANSWERS[username]
+        assert actual_conv.system_prompt == get_custom_system_prompt(medical_conditions), 'Error in loading past conversation'
+        main_ui = True
     else:
-        actual_conv = LLAMA2.get_empty_conversation(system_prompt=LLAMA2_NUTRITION_SYSTEM_PROMPT)
+        # System prompt does not matter here, ot will be set after the questions have been answered
+        actual_conv = LLAMA2.get_empty_conversation()
         actual_output = []
         CACHED_CONVERSATIONS[username] = actual_conv
         CACHED_OUTPUTS[username] = actual_output
         LOGGERS[username] = gr.CSVLogger()
+        main_ui = False
 
     conv_id = actual_conv.id
     
-    return actual_conv, conv_id, username, actual_output, actual_output
+    return actual_conv, conv_id, username, actual_output, actual_output, gr.update(visible=not main_ui), gr.update(visible=main_ui)
  
 
+def validate_questions(username: str, conversation: GenericConversationTemplate, age: int | None, size: int | None,
+                       weight: float | None, sex: str | None,
+                       conditions: str | None) -> tuple[GenericConversationTemplate, dict, dict]:
+    """Validate the initial question answers and set the conversation system prompt accordingly. Change the
+    UI to the main UI.
+
+    Parameters
+    ----------
+    username : str
+        The username of the current session.
+    conversation : GenericConversation
+        Current conversation. This is the value inside a gr.State instance.
+    age : int | None
+        Age of the user.
+    size : int | None
+        Size of the user.
+    weight : float | None
+        Weight of the user.
+    sex : str | None
+        Sex of the user.
+    conditions : str | None
+        Conditions of the user.
+
+    Returns
+    -------
+    tuple[GenericConversationTemplate, dict, dict]
+        Corresponds to the tuple of components (conversation, initial_ui, main_ui)
+    """
+
+    missing = []
+    if age is None:
+        missing.append('Age')
+    if size is None:
+        missing.append('Size')
+    if weight is None:
+        missing.append('Weight')
+    if sex is None:
+        missing.append('Sex')
+
+    if len(missing) > 0:
+        raise gr.Error(f'You must still specify {*missing,}')
+    
+    if conditions is None:
+        conditions = ''
+    
+    medical_conditions = {'age': age, 'size': size, 'weight': weight, 'sex': sex,
+                                         'conditions': conditions}
+    CACHED_QUESTION_ANSWERS[username] = medical_conditions
+
+    system_prompt = get_custom_system_prompt(medical_conditions)
+    conversation.set_system_prompt(system_prompt)
+    
+    return conversation, gr.update(visible=False), gr.update(visible=True)
+    
 
 
 # Define generation parameters and model selection
@@ -335,11 +411,20 @@ temperature = gr.Slider(0, 1, value=0.8, step=0.01, label='Temperature',
 
 # Define elements of the chatbot
 prompt = gr.Textbox(placeholder='Write your prompt here.', label='Prompt', lines=2)
-chatbot = gr.Chatbot(label='Conversation', height=500)
+chatbot = gr.Chatbot(label='NutriBot', height=500, avatar_images=(None, THUMBNAIL))
 generate_button = gr.Button('▶️ Submit', variant='primary')
 continue_button = gr.Button('🔂 Continue last answer', variant='primary')
-clear_button = gr.Button('🧹 Clear conversation')
-upload_button = gr.UploadButton("📁 Upload image", file_types=['image'])
+clear_button = gr.Button('🗑 Clear conversation')
+upload_button = gr.UploadButton("📁 Upload image", file_types=['image'], variant='primary')
+
+
+# Elements of the initial questions
+age = gr.Number(value=24, label='Age', precision=0, minimum=2, maximum=120)
+size = gr.Number(value=185, label='Size (cm)', precision=0, minimum=20, maximum=240)
+weight = gr.Number(value=67, label='Weight (kg)', precision=None, minimum=3, maximum=350, step=0.1)
+sex = gr.Radio(choices=['male', 'female'], value='male', label='Sex')
+conditions = gr.Textbox(label='Special conditions', placeholder='E.g. diabetes, food allergy...')
+validate_button = gr.Button('Valide answers', variant='primary')
 
 
 # State variable to keep one conversation per session (default value does not matter here -> it will be set
@@ -352,7 +437,6 @@ gradio_output = gr.State([])
 # Define NON-VISIBLE elements: they are only used to keep track of variables and save them to the callback.
 username = gr.Textbox('', label='Username', visible=False)
 conv_id = gr.Textbox('', label='Conversation id', visible=False)
-image = gr.Image(type='pil', label='Image input', visible=False)
 
 
 # Define the inputs for the main inference
@@ -364,16 +448,22 @@ inputs_to_continuation = [conversation, gradio_output, max_additional_new_tokens
 inputs_to_callback = [max_new_tokens, max_additional_new_tokens, do_sample, top_k, top_p, temperature,
                       chatbot, conv_id, username]
 
+# Define inputs to initial questions
+inputs_to_questions = [age, size, weight, sex, conditions]
+
+
+# Define "fake" columns to easily make all of their internal components visible/hidden
+initial_ui = gr.Column(visible=True)
+main_ui = gr.Column(visible=False)
+
 
 # Some prompt examples
 prompt_examples = [
-    "Please write a function to multiply 2 numbers `a` and `b` in Python.",
-    "Hello, what's your name?",
-    "What's the meaning of life?",
-    "How can I write a Python function to generate the nth Fibonacci number?",
-    ("Here is my data {'Name':['Tom', 'Brad', 'Kyle', 'Jerry'], 'Age':[20, 21, 19, 18], 'Height' :"
-     " [6.1, 5.9, 6.0, 6.1]}. Can you provide Python code to plot a bar graph showing the height of each person?"),
+    "Hello, who are you?",
+    "How healthy is a cheeseburger?",
+    "Any ideas for a healthy meal for tonight?",
 ]
+
 
 
 demo = gr.Blocks(title='Nutrition Chatbot')
@@ -387,33 +477,68 @@ with demo:
     # Variables we track with usual components: they do not need to be State variables -- will not be visible
     conv_id.render()
     username.render()
-    image.render()
 
     # Visible UI
-    gr.Markdown("# NutriBot: your nutritionist assistant")
-    chatbot.render()
-    prompt.render()
+    # Starts by displaying image and text
+    gr.Markdown('# <center>NutriBot: your nutritionist assistant</center>')
+    with gr.Row(variant='panel'):
+        with gr.Column(scale=1):
+            gr.Image(THUMBNAIL, show_label=False, show_download_button=False, container=True)
+        with gr.Column(scale=5):
+            gr.Markdown(
+                """
+                ### This demo showcases **NutriBot**, a nutritionist assistant chatbot.  
+                It can answer all your questions, and will provide personalized advices based on what you tell him.
+                You can also upload food or beverage images, and it will automatically recognize what are on those
+                images.  
+                  
+                ⛔️ **Limitations:** This chatbot is not an authorized medical tool, and should not be used as such.
+                    Its responses should not be considered as medical advice. If you have a specific medical condition,
+                    it is always best to consult with a qualified healthcare professional for personalized advice.  
+                  
+                ### To continue to the chatbot, please answer the following questions first for better and more customized answers:
+                """
+                )
+    
+    # Fake column to group the initial questions UI inside a single entity to eqsily activate/deactivate visibility
+    with initial_ui.render():
+        # Initial questions
+        age.render()
+        size.render()
+        weight.render()
+        sex.render()
+        conditions.render()
+        validate_button.render()
 
-    with gr.Row():
-        generate_button.render()
-        clear_button.render()
-        continue_button.render()
-        upload_button.render()
+    # Fake column to group the main UI inside a single entity to easily activate/deactivate visibility
+    with main_ui.render():
 
-    # Accordion for generation parameters
-    with gr.Accordion("Text generation parameters", open=False):
-        do_sample.render()
-        with gr.Group():
-            max_new_tokens.render()
-            max_additional_new_tokens.render()
-        with gr.Group():
-            top_k.render()
-            top_p.render()
-            temperature.render()
+        chatbot.render()
+        prompt.render()
 
-    gr.Markdown("### Prompt Examples")
-    gr.Examples(prompt_examples, inputs=prompt)
+        with gr.Row():
+            generate_button.render()
+            continue_button.render()
+            upload_button.render()
+            clear_button.render()
 
+        # Accordion for generation parameters
+        with gr.Accordion("Text generation parameters", open=False):
+            do_sample.render()
+            with gr.Group():
+                max_new_tokens.render()
+                max_additional_new_tokens.render()
+            with gr.Group():
+                top_k.render()
+                top_p.render()
+                temperature.render()
+
+        gr.Markdown("### Prompt Examples")
+        gr.Examples(prompt_examples, inputs=prompt)
+
+    # Validate the initial questions
+    validate_button.click(validate_questions, inputs=[username, conversation, *inputs_to_questions],
+                          outputs=[conversation, initial_ui, main_ui])
 
     # Perform chat generation when clicking the button
     generate_event1 = generate_button.click(chat_generation, inputs=inputs_to_generation,
@@ -445,7 +570,8 @@ with demo:
                        queue=False)
     
     # Correctly set all variables and callback at load time
-    loading_events = demo.load(loading, outputs=[conversation, conv_id, username, chatbot, gradio_output], queue=False)
+    loading_events = demo.load(loading, outputs=[conversation, conv_id, username, chatbot, gradio_output, initial_ui, main_ui],
+                               queue=False)
     loading_events.then(lambda username: LOGGERS[username].setup(inputs_to_callback, flagging_dir=f'chatbot_logs/{username}'),
                         inputs=username, queue=False)
     
