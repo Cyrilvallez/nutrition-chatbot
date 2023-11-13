@@ -1,6 +1,7 @@
 import os
 import uuid
 import copy
+import re
 
 from PIL import Image
 
@@ -57,7 +58,8 @@ LLAMA2_NUTRITION_SYSTEM_PROMPT = (
     "food allergy, you always provide adequate advice. Your answers should not include any harmful, unethical, "
     "racist, sexist, toxic, dangerous, or illegal content.\n\nIf a question does not make any sense, or is not "
     "factually coherent, explain why instead of answering something not correct. If you don't know the answer to "
-    "a question, please don't share false information or advice."
+    "a question, please don't share false information or advice.\n\nAlways answer by going straight to the point, "
+    "and do not repeat yourself in the conversation."
 )
 
 
@@ -67,15 +69,26 @@ LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = LLAMA2_NUTRITION_SYSTEM_PROMPT + (
 )
 
 
+# LLAMA2_USER_TRANSITION = (
+#     "I am going to describe an image of food or beverage to you that I just uploaded. Please take it into account "
+#     "for all my subsequent requests. Here is the description, along with an estimation of the amount of calories "
+#     "of the meal:\n"
+# )
+
+
 LLAMA2_USER_TRANSITION = (
-    "I am going to describe an image of food or beverage to you that I just uploaded. Please take it into account "
-    "for all my subsequent requests. Here is the description, along with an estimation of the amount of calories "
-    "of the meal:\n"
+    "Here is the description of an image, along with an estimation of the amount of calories of the meal. Please "
+    "act as if I just gave you the image, and you actually understood, described, and estimated the "
+    "calories yourself.\nDESCRIPTION:\n"
 )
 
+# LLAMA2_MODEL_TRANSITION = (
+#     "Thank you for the description of the image you just uploaded. What can I do for you concerning the meal "
+#     "on the image?"
+# )
+
 LLAMA2_MODEL_TRANSITION = (
-    "Thank you for the description of the image you just uploaded. What can I do for you concerning the meal "
-    "on the image?"
+    "Thank you for the image you just uploaded. From what I can see and infer, it looks like "
 )
 
 
@@ -168,7 +181,29 @@ def parse_idefics_output(output: str) -> dict:
 
         out['text'] = '\n'.join(lines[1:4])
 
+        if out['meal'].startswith('The meal on the image is '):
+            meal = out['meal'].replace('The meal on the image is ', '')
+        else:
+            meal = out['meal']
+            meal = meal[0].lower() + meal[1:]
+        out['meal_name'] = meal
+
+        match = re.search(r'([0-9]+(?:-[0-9]+)?)', out['calories'])
+        actual_calories = match.group(1)
+        out['calories_number'] = actual_calories
+
     return out
+
+
+
+def get_fake_turn(parsed_output: dict, user_template: str = LLAMA2_USER_TRANSITION,
+                  model_template: str = LLAMA2_MODEL_TRANSITION) -> tuple[str, str]:
+    
+    user_turn = user_template + parsed_output['text']
+    model_turn = model_template + parsed_output['meal_name'] + " From what I can estimate, a portion is about " + \
+        f"{parsed_output['calories_number']} kcal."
+    
+    return user_turn, model_turn
 
 
 

@@ -11,7 +11,7 @@ import gradio as gr
 
 from engine import IdeficsModel, Llama2ChatModel, TextContinuationStreamer, GenericConversationTemplate
 from engine.model import DummyModel
-from engine.template import LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION, parse_idefics_output, get_custom_system_prompt
+from engine.template import LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION, parse_idefics_output, get_custom_system_prompt, get_fake_turn
 from helpers import utils
 
 # Load both models at the beginning
@@ -221,13 +221,13 @@ def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversation
         raise gr.Error(f'The following error happened during image processing: {repr(e)}. Please choose another image.')
 
     if parsed_output['is_food']:
-        conversation.append_user_message(LLAMA2_USER_TRANSITION + parsed_output['text'])
-        conversation.append_model_message(LLAMA2_MODEL_TRANSITION)
-        gradio_output.append([(file.name,), 'Thank you for this image! How can I help you?'])
+        user_turn, model_turn = get_fake_turn(parsed_output, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION)
+        conversation.append_user_message(user_turn)
+        conversation.append_model_message(model_turn)
+        gradio_output.append([(file.name,), model_turn])
     else:
         gr.Warning("The image you just uploaded does not depict food. We only allow images of meals or "
                    "beverages.")
-        gradio_output.append([(file.name,), 'Thank you for this image! How can I help you?'])
         
     return conversation, gradio_output, gradio_output
 
@@ -491,6 +491,7 @@ with demo:
                 It can answer all your questions, and will provide personalized advices based on what you tell him.
                 You can also upload food or beverage images, and it will automatically recognize what are on those
                 images.  
+                  
                   
                 ⛔️ **Limitations:** This chatbot is not an authorized medical tool, and should not be used as such.
                     Its responses should not be considered as medical advice. If you have a specific medical condition,
