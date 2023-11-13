@@ -198,6 +198,22 @@ def parse_idefics_output(output: str) -> dict:
 
 def get_fake_turn(parsed_output: dict, user_template: str = LLAMA2_USER_TRANSITION,
                   model_template: str = LLAMA2_MODEL_TRANSITION) -> tuple[str, str]:
+    """From the output of idefics, format the fake turn to feed to the chatbot assistant.
+
+    Parameters
+    ----------
+    parsed_output : dict
+        Parsed output of idefics.
+    user_template : str, optional
+        Prefix of the user turn, by default LLAMA2_USER_TRANSITION
+    model_template : str, optional
+        Prefix of the model turn, by default LLAMA2_MODEL_TRANSITION
+
+    Returns
+    -------
+    tuple[str, str]
+        The (user, model) turn.
+    """
     
     user_turn = user_template + parsed_output['text']
     model_turn = model_template + parsed_output['meal_name'] + " From what I can estimate, a portion is about " + \
