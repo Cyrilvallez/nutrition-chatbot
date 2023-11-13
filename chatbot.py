@@ -419,11 +419,11 @@ upload_button = gr.UploadButton("📁 Upload image", file_types=['image'], varia
 
 
 # Elements of the initial questions
-age = gr.Number(value=24, label='Age', precision=0, minimum=2, maximum=120)
-size = gr.Number(value=185, label='Size (cm)', precision=0, minimum=20, maximum=240)
-weight = gr.Number(value=67, label='Weight (kg)', precision=None, minimum=3, maximum=350, step=0.1)
-sex = gr.Radio(choices=['male', 'female'], value='male', label='Sex')
-conditions = gr.Textbox(label='Special conditions', placeholder='E.g. diabetes, food allergy...')
+age = gr.Number(value=30, label='Age', precision=0, minimum=2, maximum=120)
+size = gr.Number(value=160, label='Size (cm)', precision=0, minimum=20, maximum=240)
+weight = gr.Number(value=56, label='Weight (kg)', precision=None, minimum=3, maximum=350, step=0.1)
+sex = gr.Radio(choices=['male', 'female'], value=None, label='Sex', scale=1)
+conditions = gr.Textbox(label='Special conditions', placeholder='E.g. diabetes, food allergy...', scale=3)
 validate_button = gr.Button('Valide answers', variant='primary')
 
 
@@ -495,19 +495,20 @@ with demo:
                 ⛔️ **Limitations:** This chatbot is not an authorized medical tool, and should not be used as such.
                     Its responses should not be considered as medical advice. If you have a specific medical condition,
                     it is always best to consult with a qualified healthcare professional for personalized advice.  
-                  
-                ### To continue to the chatbot, please answer the following questions first for better and more customized answers:
                 """
                 )
     
     # Fake column to group the initial questions UI inside a single entity to eqsily activate/deactivate visibility
     with initial_ui.render():
+        gr.Markdown("### To start with the chatbot, please begin by answering the following questions for a better and more customized service:")
         # Initial questions
-        age.render()
-        size.render()
-        weight.render()
-        sex.render()
-        conditions.render()
+        with gr.Row():
+            age.render()
+            size.render()
+            weight.render()
+        with gr.Row():
+            sex.render()
+            conditions.render()
         validate_button.render()
 
     # Fake column to group the main UI inside a single entity to easily activate/deactivate visibility
@@ -518,8 +519,8 @@ with demo:
 
         with gr.Row():
             generate_button.render()
-            continue_button.render()
             upload_button.render()
+            continue_button.render()
             clear_button.render()
 
         # Accordion for generation parameters
@@ -538,7 +539,7 @@ with demo:
 
     # Validate the initial questions
     validate_button.click(validate_questions, inputs=[username, conversation, *inputs_to_questions],
-                          outputs=[conversation, initial_ui, main_ui])
+                          outputs=[conversation, initial_ui, main_ui], queue=False)
 
     # Perform chat generation when clicking the button
     generate_event1 = generate_button.click(chat_generation, inputs=inputs_to_generation,
