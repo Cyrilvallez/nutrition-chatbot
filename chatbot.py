@@ -491,8 +491,8 @@ with demo:
                 It can answer all your questions, and will provide personalized advices based on what you tell him.
                 You can also upload food or beverage images, and it will automatically recognize what are on those
                 images.  
-                  
-                  
+                   
+                   
                 ⛔️ **Limitations:** This chatbot is not an authorized medical tool, and should not be used as such.
                     Its responses should not be considered as medical advice. If you have a specific medical condition,
                     it is always best to consult with a qualified healthcare professional for personalized advice.  
