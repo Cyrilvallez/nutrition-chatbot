@@ -18,7 +18,8 @@ from helpers import utils
 IDEFICS_VERSION = 'idefics-9B'
 IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0) if torch.cuda.is_available() else DummyModel()
 
-MODEL_VERSION = 'llama2-13B-chat'
+# MODEL_VERSION = 'llama2-13B-chat'
+MODEL_VERSION = 'mistral-7B-instruct'
 MODEL = ChatModel(MODEL_VERSION, gpu_rank=1) if torch.cuda.is_available() else DummyModel()
 
 # File where the valid credentials are stored

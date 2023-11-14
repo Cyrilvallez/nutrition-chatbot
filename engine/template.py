@@ -544,7 +544,7 @@ class Llama2ChatConversationTemplate(GenericConversationTemplate):
     
 
 
-# reference: https://github.com/facebookresearch/llama/blob/1a240688810f8036049e8da36b073f63d2ac552c/llama/generation.py#L212
+# reference: https://docs.mistral.ai/usage/guardrailing/
 class MistralConversationTemplate(GenericConversationTemplate):
 
     def __init__(self, eos_token: str = '</s>', system_prompt: str = MISTRAL_NUTRITION_SYSTEM_PROMPT):
