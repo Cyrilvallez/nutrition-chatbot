@@ -1,6 +1,7 @@
 import os
 
 from PIL import Image
+import pandas as pd
 
 from helpers import utils
 
@@ -28,6 +29,27 @@ class ImageDataset(object):
         
         else:
             raise ValueError('Cannot slice with this type.')
+    
+    def __iter__(self):
+        """Create a simple generator over the samples.
+        """
+
+        for i in range(len(self)):
+            yield self[i]
+
+
+class NutriQuestions(object):
+
+    def __init__(self):
+
+        self.path = os.path.join(utils.ROOT_FOLDER, 'data', 'nutri_questions.xlsx')
+        self.data = pd.read_excel(self.path).to_dict(orient='records')
+
+    def __len__(self) -> int:
+        return len(self.data)
+    
+    def __getitem__(self, key: int | slice) -> dict | list[dict]:
+        return self.data[key]
     
     def __iter__(self):
         """Create a simple generator over the samples.
