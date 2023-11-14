@@ -39,8 +39,8 @@ THUMBNAIL = os.path.join(utils.ROOT_FOLDER, 'avatars', 'nutribot_cropped.png')
 
 
 def chat_generation(conversation: GenericConversationTemplate, gradio_output: list[list], prompt: str,
-                    max_new_tokens: int, do_sample: bool, top_k: int, top_p: float,
-                    temperature: float) -> tuple[GenericConversationTemplate, str, list[list], list[list]]:
+                    max_new_tokens: int, do_sample: bool, top_k: int, top_p: float, temperature: float,
+                    append_prompt_to_gradio: bool = True) -> tuple[GenericConversationTemplate, str, list[list], list[list]]:
     """Chat generation with streamed output.
 
     Parameters
@@ -62,6 +62,8 @@ def chat_generation(conversation: GenericConversationTemplate, gradio_output: li
     temperature : float
         How to cool down the probability distribution. Value between 1 (no cooldown) and 0 (greedy search,
         no randomness).
+    append_prompt_to_gradio : bool, optional
+        Whether to append the prompt to the gradio output, by default True.
 
     Yields
     ------
@@ -81,7 +83,8 @@ def chat_generation(conversation: GenericConversationTemplate, gradio_output: li
     streamer = TextIteratorStreamer(LLAMA2.tokenizer, skip_prompt=True, timeout=timeout, skip_special_tokens=True)
 
     output_copy = copy.deepcopy(gradio_output)
-    output_copy.append([prompt, None])
+    if append_prompt_to_gradio:
+        output_copy.append([prompt, None])
     
     # We need to launch a new thread to get text from the streamer in real-time as it is being generated. We
     # use an executor because it makes it easier to catch possible exceptions
@@ -113,7 +116,10 @@ def chat_generation(conversation: GenericConversationTemplate, gradio_output: li
                 raise gr.Error(f'Generation timed out (no new tokens were generated after {timeout} s)')
             
     # Update the component with the final value
-    gradio_output.append(conversation.get_last_turn())
+    if append_prompt_to_gradio:
+        gradio_output.append(conversation.get_last_turn())
+    else:
+        gradio_output[-1][1] = conversation.model_history_text[-1]
     
     # Update the chatbot with the real conversation (which may be slightly different due to postprocessing)
     yield conversation, '', gradio_output, gradio_output
@@ -226,6 +232,7 @@ def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversation
         # conversation.append_model_message(model_turn)
         # gradio_output.append([(file.name,), model_turn])
 
+        gradio_output.append([(file.name,), None])
         user_turn, _ = get_fake_turn(parsed_output, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION)
         yield from chat_generation(conversation, gradio_output, user_turn, 512, True, 50, 0.9, 0.8)
     else:
