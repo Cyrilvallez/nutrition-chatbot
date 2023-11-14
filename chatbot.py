@@ -221,15 +221,18 @@ def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversation
         raise gr.Error(f'The following error happened during image processing: {repr(e)}. Please choose another image.')
 
     if parsed_output['is_food']:
-        user_turn, model_turn = get_fake_turn(parsed_output, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION)
-        conversation.append_user_message(user_turn)
-        conversation.append_model_message(model_turn)
-        gradio_output.append([(file.name,), model_turn])
+        # user_turn, model_turn = get_fake_turn(parsed_output, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION)
+        # conversation.append_user_message(user_turn)
+        # conversation.append_model_message(model_turn)
+        # gradio_output.append([(file.name,), model_turn])
+
+        user_turn, _ = get_fake_turn(parsed_output, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION)
+        return chat_generation(conversation, gradio_output, user_turn, 512, True, 50, 0.9, 0.8)
     else:
         gr.Warning("The image you just uploaded does not depict food. We only allow images of meals or "
                    "beverages.")
         
-    return conversation, gradio_output, gradio_output
+    return conversation, '', gradio_output, gradio_output
 
 
 

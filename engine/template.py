@@ -79,7 +79,7 @@ LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = LLAMA2_NUTRITION_SYSTEM_PROMPT + (
 LLAMA2_USER_TRANSITION = (
     "Here is the description of an image, along with an estimation of the amount of calories of the meal. Please "
     "act as if I just gave you the image, and you actually understood, described, and estimated the "
-    "calories yourself.\nDESCRIPTION:\n"
+    "calories yourself.\nDESCRIPTION:\n{description}"
 )
 
 # LLAMA2_MODEL_TRANSITION = (
@@ -88,7 +88,8 @@ LLAMA2_USER_TRANSITION = (
 # )
 
 LLAMA2_MODEL_TRANSITION = (
-    "Thank you for the image you just uploaded. From what I can see and infer, it looks like "
+    "Thank you for the image you just uploaded. From what I can see, it looks like {meal}. I estimate that a "
+    "portion should be about {calories} kcal."
 )
 
 
@@ -186,6 +187,8 @@ def parse_idefics_output(output: str) -> dict:
         else:
             meal = out['meal']
             meal = meal[0].lower() + meal[1:]
+        if meal.endswith('.'):
+            meal = meal[0:-1]
         out['meal_name'] = meal
 
         match = re.search(r'([0-9]+(?:-[0-9]+)?)', out['calories'])
@@ -215,9 +218,8 @@ def get_fake_turn(parsed_output: dict, user_template: str = LLAMA2_USER_TRANSITI
         The (user, model) turn.
     """
     
-    user_turn = user_template + parsed_output['text']
-    model_turn = model_template + parsed_output['meal_name'] + " From what I can estimate, a portion is about " + \
-        f"{parsed_output['calories_number']} kcal."
+    user_turn = user_template.format(description=parsed_output['text'])
+    model_turn = model_template.format(meal=parsed_output['meal_name'], calories=parsed_output['calories_number'])
     
     return user_turn, model_turn
 
