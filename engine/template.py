@@ -86,16 +86,23 @@ LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = LLAMA2_NUTRITION_SYSTEM_PROMPT + (
 # )
 
 
-LLAMA2_USER_TRANSITION = (
-    "Here is the description of an image of food, along with an estimation of the amount of calories of the meal. Please "
-    "act as if I just gave you the image, and you actually understood, described, and estimated the "
-    "ingredients and calories yourself. Do NOT try to estimate the size of the "
-    "ingredients.\nDESCRIPTION:\n{description}"
-)
+# LLAMA2_USER_TRANSITION = (
+#     "Here is the description of an image of food, along with an estimation of the amount of calories of the meal. Please "
+#     "act as if I just gave you the image, and you actually understood, described, and estimated the "
+#     "ingredients and calories yourself. Do NOT try to estimate the size of the "
+#     "ingredients.\nDESCRIPTION:\n{description}"
+# )
 
 # LLAMA2_USER_TRANSITION = (
 #     "Here is the description of an image:\nDESCRIPTION:\n{description}"
 # )
+
+
+LLAMA2_USER_TRANSITION = (
+    "I just uploaded an image of food to your image recognition system. Can you tell me what is the meal "
+    "or beverage in the picture?"
+)
+
 
 # LLAMA2_MODEL_TRANSITION = (
 #     "Thank you for the description of the image you just uploaded. What can I do for you concerning the meal "
@@ -103,8 +110,8 @@ LLAMA2_USER_TRANSITION = (
 # )
 
 LLAMA2_MODEL_TRANSITION = (
-    "Thank you for the image you just uploaded. From what I can see, it looks like {meal}. I estimate that a "
-    "portion should be about {calories} kcal."
+    "Thank you for the image you just uploaded! From what I can see, it looks like {meal}. I recognized the following "
+    "ingredients: {ingredients}. I estimate that a portion should be about {calories} kcal."
 )
 
 
@@ -197,6 +204,7 @@ def parse_idefics_output(output: str) -> dict:
 
         out['text'] = '\n'.join(lines[1:4])
 
+        # Meal name
         if out['meal'].startswith('The meal on the image is '):
             meal = out['meal'].replace('The meal on the image is ', '')
         else:
@@ -206,6 +214,17 @@ def parse_idefics_output(output: str) -> dict:
             meal = meal[0:-1]
         out['meal_name'] = meal
 
+        # Ingredient list
+        if out['ingredients'].startswith('The ingredients are: '):
+            ingredients = out['ingredients'].replace('The ingredients are: ', '')
+        else:
+            ingredients = out['ingredients']
+            ingredients = ingredients[0].lower() + ingredients[1:]
+        if ingredients.endswith('.'):
+            ingredients = ingredients[0:-1]
+        out['ingredient_list'] = ingredients
+
+        # Calorie range (number)
         match = re.search(r'([0-9]+(?:-[0-9]+)?)', out['calories'])
         actual_calories = match.group(1)
         out['calories_number'] = actual_calories
@@ -223,9 +242,9 @@ def get_fake_turn(parsed_output: dict, user_template: str = LLAMA2_USER_TRANSITI
     parsed_output : dict
         Parsed output of idefics.
     user_template : str, optional
-        Prefix of the user turn, by default LLAMA2_USER_TRANSITION
+        Template of the user turn, by default LLAMA2_USER_TRANSITION
     model_template : str, optional
-        Prefix of the model turn, by default LLAMA2_MODEL_TRANSITION
+        Template of the model turn, by default LLAMA2_MODEL_TRANSITION
 
     Returns
     -------
@@ -233,8 +252,9 @@ def get_fake_turn(parsed_output: dict, user_template: str = LLAMA2_USER_TRANSITI
         The (user, model) turn.
     """
     
-    user_turn = user_template.format(description=parsed_output['text'])
-    model_turn = model_template.format(meal=parsed_output['meal_name'], calories=parsed_output['calories_number'])
+    user_turn = user_template
+    model_turn = model_template.format(meal=parsed_output['meal_name'], ingredients=parsed_output['ingredient_list'],
+                                       calories=parsed_output['calories_number'])
     
     return user_turn, model_turn
 
