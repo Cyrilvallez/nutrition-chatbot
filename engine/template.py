@@ -62,7 +62,6 @@ LLAMA2_NUTRITION_SYSTEM_PROMPT = (
     "and do not repeat yourself in the conversation."
 )
 
-
 # LLAMA2_NUTRITION_SYSTEM_PROMPT = (
 #     "You are NutriBot, a helpful, honest and highly-trained nutritionist assistant. You provide advices to people on food "
 #     "and nutrition, and how they impact health. You try to improve their lives by providing healthy food solutions "
@@ -73,47 +72,61 @@ LLAMA2_NUTRITION_SYSTEM_PROMPT = (
 # )
 
 
-LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = LLAMA2_NUTRITION_SYSTEM_PROMPT + (
+CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = (
     "\n\nIn particular, you are giving advice to a {sex} of {age} years old, who weights {weight} kilograms and "
     "measures {size} centimeters. {optional_medical_conditions}Tailor your answer to this specific person."
 )
 
 
-# LLAMA2_USER_TRANSITION = (
+# USER_TRANSITION = (
 #     "I am going to describe an image of food or beverage to you that I just uploaded. Please take it into account "
 #     "for all my subsequent requests. Here is the description, along with an estimation of the amount of calories "
 #     "of the meal:\n"
 # )
 
 
-# LLAMA2_USER_TRANSITION = (
+# USER_TRANSITION = (
 #     "Here is the description of an image of food, along with an estimation of the amount of calories of the meal. Please "
 #     "act as if I just gave you the image, and you actually understood, described, and estimated the "
 #     "ingredients and calories yourself. Do NOT try to estimate the size of the "
 #     "ingredients.\nDESCRIPTION:\n{description}"
 # )
 
-# LLAMA2_USER_TRANSITION = (
+# USER_TRANSITION = (
 #     "Here is the description of an image:\nDESCRIPTION:\n{description}"
 # )
 
 
-LLAMA2_USER_TRANSITION = (
+USER_TRANSITION = (
     "I just uploaded an image of food to your image recognition system. Can you tell me what is the meal "
     "or beverage in the picture?"
 )
 
 
-# LLAMA2_MODEL_TRANSITION = (
+# MODEL_TRANSITION = (
 #     "Thank you for the description of the image you just uploaded. What can I do for you concerning the meal "
 #     "on the image?"
 # )
 
-LLAMA2_MODEL_TRANSITION = (
+MODEL_TRANSITION = (
     "Thank you for the image you just uploaded! From what I can see, it looks like {meal}. I recognized the following "
     "ingredients: {ingredients}. I estimate that a portion should be about {calories} kcal."
 )
 
+
+MISTRAL_DEFAULT_SYSTEM_PROMPT = (
+    "Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, "
+    "unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity."
+)
+
+
+MISTRAL_NUTRITION_SYSTEM_PROMPT = (
+    "You are NutriBot, a world-renowned nutritionist assistant. You provide advices to people on food "
+    "and nutrition, and how they impact health. You try to improve their lives by providing healthy food solutions "
+    "and recipes. Always assist with care, respect, and truth. Respond with utmost utility yet securely. "
+    "Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity. "
+    "Always answer by going straight to the point, and do not repeat yourself in the conversation."
+)
 
 class FewShotIdeficsTemplate(object):
 
@@ -233,8 +246,8 @@ def parse_idefics_output(output: str) -> dict:
 
 
 
-def get_fake_turn(parsed_output: dict, user_template: str = LLAMA2_USER_TRANSITION,
-                  model_template: str = LLAMA2_MODEL_TRANSITION) -> tuple[str, str]:
+def get_fake_turn(parsed_output: dict, user_template: str = USER_TRANSITION,
+                  model_template: str = MODEL_TRANSITION) -> tuple[str, str]:
     """From the output of idefics, format the fake turn to feed to the chatbot assistant.
 
     Parameters
@@ -242,9 +255,9 @@ def get_fake_turn(parsed_output: dict, user_template: str = LLAMA2_USER_TRANSITI
     parsed_output : dict
         Parsed output of idefics.
     user_template : str, optional
-        Template of the user turn, by default LLAMA2_USER_TRANSITION
+        Template of the user turn, by default USER_TRANSITION
     model_template : str, optional
-        Template of the model turn, by default LLAMA2_MODEL_TRANSITION
+        Template of the model turn, by default MODEL_TRANSITION
 
     Returns
     -------
@@ -260,21 +273,23 @@ def get_fake_turn(parsed_output: dict, user_template: str = LLAMA2_USER_TRANSITI
 
 
 
-def get_custom_system_prompt(medical_conditions: dict, base_template: str = LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT) -> str:
+def get_custom_system_prompt(medical_conditions: dict, model_name: str) -> str:
     """Create customized system prompt based on an individual medical conditions.
 
     Parameters
     ----------
     medical_conditions : dict
         The medical conditions
-    base_template : str, optional
-        The base template of the prompt, by default LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT
+    model_name : str
+        Name of the current model.
 
     Returns
     -------
     str
         The formatted system prompt.
     """
+
+    base_template = SYSTEM_PROMPT_MAPPING[model_name] + CUSTOMIZED_NUTRITION_SYSTEM_PROMPT
 
     pronoun = 'He' if medical_conditions['sex'] == 'male' else 'She'
     special_conditions = f"{pronoun} has {medical_conditions['conditions']}. " if medical_conditions['conditions'] != '' else ''
@@ -479,8 +494,8 @@ class GenericConversationTemplate(object):
             return [[None, None]]
 
         # Do not show the "syntetic" conversation turns (fake turns that we use to add context)
-        return [list(conv_turn) for conv_turn in self if not (conv_turn[0].startswith(LLAMA2_USER_TRANSITION)
-                                                              and conv_turn[1].startswith(LLAMA2_MODEL_TRANSITION))]
+        return [list(conv_turn) for conv_turn in self if not (conv_turn[0].startswith(USER_TRANSITION)
+                                                              and conv_turn[1].startswith(MODEL_TRANSITION))]
 
 
 # reference: https://github.com/facebookresearch/llama/blob/1a240688810f8036049e8da36b073f63d2ac552c/llama/generation.py#L212
@@ -526,3 +541,59 @@ class Llama2ChatConversationTemplate(GenericConversationTemplate):
                 prompt += self.assistant_token
 
         return prompt
+    
+
+
+# reference: https://github.com/facebookresearch/llama/blob/1a240688810f8036049e8da36b073f63d2ac552c/llama/generation.py#L212
+class MistralConversationTemplate(GenericConversationTemplate):
+
+    def __init__(self, eos_token: str = '</s>', system_prompt: str = MISTRAL_NUTRITION_SYSTEM_PROMPT):
+
+        super().__init__(eos_token, system_prompt)
+
+        # Override value
+        self.add_space_to_continuation_prompt = True
+
+        self.user_token = '[INST]'
+        self.assistant_token = '[/INST]'
+
+
+    def get_prompt(self) -> str:
+        """Format the prompt representing the conversation that we will feed to the tokenizer.
+        """
+
+        # If we are not using system prompt, do not add the template formatting with empty prompt
+        system_prompt = self.system_prompt.strip()
+
+        prompt = ''
+        for i, (user_message, model_response) in enumerate(self):
+
+            if i == 0:
+                prompt += self.user_token + ' ' + system_prompt + ' ' + user_message.strip() + ' '
+            else:
+                prompt += self.user_token + ' ' + user_message.strip() + ' '
+            if model_response is not None:
+                prompt += self.assistant_token + ' ' + model_response.strip() + self.eos_token
+            else:
+                prompt += self.assistant_token
+
+        return prompt
+    
+
+
+TEMPLATE_MAPPING = {
+    'llama2-7B-chat': Llama2ChatConversationTemplate,
+    'llama2-13B-chat': Llama2ChatConversationTemplate,
+    'llama2-70B-chat': Llama2ChatConversationTemplate,
+
+    'mistral-7B-instruct': MistralConversationTemplate,
+}
+
+
+SYSTEM_PROMPT_MAPPING = {
+    'llama2-7B-chat': LLAMA2_NUTRITION_SYSTEM_PROMPT,
+    'llama2-13B-chat': LLAMA2_NUTRITION_SYSTEM_PROMPT,
+    'llama2-70B-chat': LLAMA2_NUTRITION_SYSTEM_PROMPT,
+
+    'mistral-7B-instruct': MISTRAL_NUTRITION_SYSTEM_PROMPT,
+}

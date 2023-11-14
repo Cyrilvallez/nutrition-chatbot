@@ -9,17 +9,17 @@ import torch
 from transformers import TextIteratorStreamer
 import gradio as gr
 
-from engine import IdeficsModel, Llama2ChatModel, TextContinuationStreamer, GenericConversationTemplate
+from engine import IdeficsModel, ChatModel, TextContinuationStreamer, GenericConversationTemplate
 from engine.model import DummyModel
-from engine.template import LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION, parse_idefics_output, get_custom_system_prompt, get_fake_turn
+from engine.template import USER_TRANSITION, MODEL_TRANSITION, parse_idefics_output, get_custom_system_prompt, get_fake_turn
 from helpers import utils
 
 # Load both models at the beginning
 IDEFICS_VERSION = 'idefics-9B'
 IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0) if torch.cuda.is_available() else DummyModel()
 
-LLAMA2_VERSION = 'llama2-13B-chat'
-LLAMA2 = Llama2ChatModel(LLAMA2_VERSION, gpu_rank=1) if torch.cuda.is_available() else DummyModel()
+MODEL_VERSION = 'llama2-13B-chat'
+MODEL = ChatModel(MODEL_VERSION, gpu_rank=1) if torch.cuda.is_available() else DummyModel()
 
 # File where the valid credentials are stored
 CREDENTIALS_FILE = os.path.join(utils.ROOT_FOLDER, '.gradio_login.txt')
@@ -74,13 +74,13 @@ def chat_generation(conversation: GenericConversationTemplate, gradio_output: li
     timeout = 20
 
     if not torch.cuda.is_available():
-        out = LLAMA2.generate_conversation(prompt, conv_history=conversation)
+        out = MODEL.generate_conversation(prompt, conv_history=conversation)
         gradio_output.append(conversation.get_last_turn())
         print(gradio_output)
         return conversation, '', gradio_output, gradio_output
 
     # To show text as it is being generated
-    streamer = TextIteratorStreamer(LLAMA2.tokenizer, skip_prompt=True, timeout=timeout, skip_special_tokens=True)
+    streamer = TextIteratorStreamer(MODEL.tokenizer, skip_prompt=True, timeout=timeout, skip_special_tokens=True)
 
     output_copy = copy.deepcopy(gradio_output)
     if append_prompt_to_gradio:
@@ -90,7 +90,7 @@ def chat_generation(conversation: GenericConversationTemplate, gradio_output: li
     # use an executor because it makes it easier to catch possible exceptions
     with ThreadPoolExecutor(max_workers=1) as executor:
         # This will update `conversation` in-place
-        future = executor.submit(LLAMA2.generate_conversation, prompt, conv_history=conversation,
+        future = executor.submit(MODEL.generate_conversation, prompt, conv_history=conversation,
                                  max_new_tokens=max_new_tokens, do_sample=do_sample, top_k=top_k, top_p=top_p,
                                  temperature=temperature, seed=None, stopping_patterns=None,
                                  truncate_if_conv_too_long=True, streamer=streamer)
@@ -156,14 +156,14 @@ def continue_generation(conversation: GenericConversationTemplate, gradio_output
     """
 
     # If we just uploaded an image, do nothing
-    if conversation.user_history_text[-1].startswith(LLAMA2_USER_TRANSITION) and \
-        conversation.model_history_text[-1].startswith(LLAMA2_MODEL_TRANSITION):
+    if conversation.user_history_text[-1].startswith(USER_TRANSITION) and \
+        conversation.model_history_text[-1].startswith(MODEL_TRANSITION):
         return conversation, gradio_output, gradio_output
    
     timeout = 20
 
     # To show text as it is being generated
-    streamer = TextContinuationStreamer(LLAMA2.tokenizer, skip_prompt=True, timeout=timeout, skip_special_tokens=True)
+    streamer = TextContinuationStreamer(MODEL.tokenizer, skip_prompt=True, timeout=timeout, skip_special_tokens=True)
 
     output_copy = copy.deepcopy(gradio_output)
     
@@ -171,7 +171,7 @@ def continue_generation(conversation: GenericConversationTemplate, gradio_output
     # use an executor because it makes it easier to catch possible exceptions
     with ThreadPoolExecutor(max_workers=1) as executor:
         # This will update `conversation` in-place
-        future = executor.submit(LLAMA2.continue_last_conversation_turn, conv_history=conversation,
+        future = executor.submit(MODEL.continue_last_conversation_turn, conv_history=conversation,
                                  max_new_tokens=additional_max_new_tokens, do_sample=do_sample, top_k=top_k,
                                  top_p=top_p, temperature=temperature, seed=None, stopping_patterns=None,
                                  truncate_if_conv_too_long=True, streamer=streamer)
@@ -227,13 +227,13 @@ def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversation
         raise gr.Error(f'The following error happened during image processing: {repr(e)}. Please choose another image.')
 
     if parsed_output['is_food']:
-        user_turn, model_turn = get_fake_turn(parsed_output, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION)
+        user_turn, model_turn = get_fake_turn(parsed_output, USER_TRANSITION, MODEL_TRANSITION)
         conversation.append_user_message(user_turn)
         conversation.append_model_message(model_turn)
         gradio_output.append([(file.name,), model_turn])
 
         # gradio_output.append([(file.name,), None])
-        # user_turn, _ = get_fake_turn(parsed_output, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION)
+        # user_turn, _ = get_fake_turn(parsed_output, USER_TRANSITION, MODEL_TRANSITION)
         # yield conversation, '', gradio_output, gradio_output
         # yield from chat_generation(conversation, gradio_output, user_turn, 512, True, 50, 0.9, 0.8, False)
     else:
@@ -295,10 +295,10 @@ def clear_chatbot(username: str) -> tuple[GenericConversationTemplate, str, list
 
     # Get the system prompt from the cached medical conditions
     medical_conditions = CACHED_QUESTION_ANSWERS[username]
-    system_prompt = get_custom_system_prompt(medical_conditions)
+    system_prompt = get_custom_system_prompt(medical_conditions, MODEL.model_name)
     
     # Create the new objects
-    conversation = LLAMA2.get_empty_conversation(system_prompt=system_prompt)
+    conversation = MODEL.get_empty_conversation(system_prompt=system_prompt)
     gradio_output = []
     # Cache value
     CACHED_CONVERSATIONS[username] = conversation
@@ -334,11 +334,11 @@ def loading(request: gr.Request) -> tuple[GenericConversationTemplate, str, str,
         actual_output = CACHED_OUTPUTS[username]
 
         medical_conditions = CACHED_QUESTION_ANSWERS[username]
-        assert actual_conv.system_prompt == get_custom_system_prompt(medical_conditions), 'Error in loading past conversation'
+        assert actual_conv.system_prompt == get_custom_system_prompt(medical_conditions, MODEL.model_name), 'Error in loading past conversation'
         main_ui = True
     else:
         # System prompt does not matter here, ot will be set after the questions have been answered
-        actual_conv = LLAMA2.get_empty_conversation()
+        actual_conv = MODEL.get_empty_conversation()
         actual_output = []
         CACHED_CONVERSATIONS[username] = actual_conv
         CACHED_OUTPUTS[username] = actual_output
@@ -399,7 +399,7 @@ def validate_questions(username: str, conversation: GenericConversationTemplate,
                                          'conditions': conditions}
     CACHED_QUESTION_ANSWERS[username] = medical_conditions
 
-    system_prompt = get_custom_system_prompt(medical_conditions)
+    system_prompt = get_custom_system_prompt(medical_conditions, MODEL.model_name)
     conversation.set_system_prompt(system_prompt)
     
     return conversation, gr.update(visible=False), gr.update(visible=True)
@@ -441,7 +441,7 @@ validate_button = gr.Button('Validate answers', variant='primary')
 
 # State variable to keep one conversation per session (default value does not matter here -> it will be set
 # by loading() method anyway)
-conversation = gr.State(LLAMA2.get_empty_conversation())
+conversation = gr.State(MODEL.get_empty_conversation())
 # This is a duplicate of the chatbot value, to be able to reload it if we reload the page
 gradio_output = gr.State([])
 

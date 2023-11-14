@@ -1,4 +1,5 @@
 import copy
+import abc
 
 import torch
 from PIL import Image
@@ -228,15 +229,11 @@ class IdeficsModel(object):
 
 
 
-
-class Llama2ChatModel(object):
+class ChatModel(object):
 
     def __init__(self, model_name, quantization_8bits: bool = False, quantization_4bits: bool = False,
                  dtype: torch.dtype | None = None, max_fraction_gpu_0: float = 0.8, max_fraction_gpus: float = 0.8,
                  device_map: dict | str | None = None, gpu_rank: int = 0):
-        
-        if model_name not in loader.LLAMA2_MODELS_MAPPING.keys():
-            raise ValueError('You did not provide a valid llama2 model name.')
         
         self.model, self.tokenizer = loader.load_model_and_processor(model_name, quantization_8bits=quantization_8bits,
                                                                      quantization_4bits=quantization_4bits, dtype=dtype,
@@ -582,9 +579,12 @@ class Llama2ChatModel(object):
         return conv_history
     
 
-    def get_empty_conversation(self, system_prompt: str = template.LLAMA2_NUTRITION_SYSTEM_PROMPT) -> template.GenericConversationTemplate:
+    def get_empty_conversation(self, system_prompt: str | None = None) -> template.GenericConversationTemplate:
         """Return a new empty conversation with the template of the current model."""
-        return template.Llama2ChatConversationTemplate(system_prompt=system_prompt)
+        if system_prompt is None:
+            return template.TEMPLATE_MAPPING[self.model_name]()
+        else:
+            return template.TEMPLATE_MAPPING[self.model_name](system_prompt=system_prompt)
     
 
     def get_context_size(self) -> int:
