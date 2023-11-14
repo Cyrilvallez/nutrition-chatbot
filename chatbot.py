@@ -234,6 +234,7 @@ def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversation
 
         gradio_output.append([(file.name,), None])
         user_turn, _ = get_fake_turn(parsed_output, LLAMA2_USER_TRANSITION, LLAMA2_MODEL_TRANSITION)
+        yield conversation, '', gradio_output, gradio_output
         yield from chat_generation(conversation, gradio_output, user_turn, 512, True, 50, 0.9, 0.8, False)
     else:
         gr.Warning("The image you just uploaded does not depict food. We only allow images of meals or "
