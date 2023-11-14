@@ -74,7 +74,8 @@ LLAMA2_NUTRITION_SYSTEM_PROMPT = (
 
 CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = (
     "\n\nIn particular, you know you are speaking to a {sex} of {age} years old, who weights {weight} kilograms and "
-    "measures {size} centimeters. {optional_medical_conditions}Use this information to personalize your answers."
+    "measures {size} centimeters (that is a BMI of {BMI}). {optional_medical_conditions}Use this information to "
+    "personalize your answers."
 )
 
 
@@ -293,11 +294,13 @@ def get_custom_system_prompt(medical_conditions: dict, model_name: str) -> str:
 
     base_template = SYSTEM_PROMPT_MAPPING[model_name] + CUSTOMIZED_NUTRITION_SYSTEM_PROMPT
 
+    BMI = medical_conditions['weight'] / (medical_conditions['size']/100)**2
+    BMI = f'{BMI:.1f}'
     pronoun = 'He' if medical_conditions['sex'] == 'male' else 'She'
     special_conditions = f"{pronoun} has {medical_conditions['conditions']}. " if medical_conditions['conditions'] != '' else ''
     system_prompt = base_template.format(age=medical_conditions['age'], size=medical_conditions['size'],
                                          weight=medical_conditions['weight'], sex=medical_conditions['sex'],
-                                         optional_medical_conditions=special_conditions)
+                                         BMI=BMI, optional_medical_conditions=special_conditions)
     
     return system_prompt
 
