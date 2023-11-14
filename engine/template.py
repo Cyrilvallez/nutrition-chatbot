@@ -564,7 +564,6 @@ class MistralConversationTemplate(GenericConversationTemplate):
         """Format the prompt representing the conversation that we will feed to the tokenizer.
         """
 
-        # If we are not using system prompt, do not add the template formatting with empty prompt
         system_prompt = self.system_prompt.strip()
 
         prompt = ''
@@ -582,6 +581,44 @@ class MistralConversationTemplate(GenericConversationTemplate):
         return prompt
     
 
+# reference: https://docs.mistral.ai/usage/guardrailing/
+class ZephyrConversationTemplate(GenericConversationTemplate):
+
+    def __init__(self, eos_token: str = '</s>', system_prompt: str = MISTRAL_NUTRITION_SYSTEM_PROMPT):
+
+        super().__init__(eos_token, system_prompt)
+
+        # Override value
+        self.add_space_to_continuation_prompt = False
+
+        self.system_token = '<|system|>'
+        self.user_token = '<|user|>'
+        self.assistant_token = '<|assistant|>'
+
+
+    def get_prompt(self) -> str:
+        """Format the prompt representing the conversation that we will feed to the tokenizer.
+        """
+
+        # If we are not using system prompt, do not add the template formatting with empty prompt
+
+        if self.system_prompt.strip() != '':
+            prompt = self.system_token + '\n' + self.system_prompt.strip() + self.eos_token + '\n'
+        else:
+            prompt = ''
+
+        for i, (user_message, model_response) in enumerate(self):
+
+            prompt += self.user_token + '\n' + user_message.strip() + self.eos_token + '\n'
+
+            if model_response is not None:
+                prompt += self.assistant_token + '\n' + model_response.strip() + self.eos_token + '\n'
+            else:
+                prompt += self.assistant_token + '\n'
+
+        return prompt
+    
+
 
 TEMPLATE_MAPPING = {
     'llama2-7B-chat': Llama2ChatConversationTemplate,
@@ -589,6 +626,8 @@ TEMPLATE_MAPPING = {
     'llama2-70B-chat': Llama2ChatConversationTemplate,
 
     'mistral-7B-instruct': MistralConversationTemplate,
+
+    'zephyr-7B-beta': ZephyrConversationTemplate,
 }
 
 
@@ -598,4 +637,6 @@ SYSTEM_PROMPT_MAPPING = {
     'llama2-70B-chat': LLAMA2_NUTRITION_SYSTEM_PROMPT,
 
     'mistral-7B-instruct': MISTRAL_NUTRITION_SYSTEM_PROMPT,
+
+    'zephyr-7B-beta': MISTRAL_NUTRITION_SYSTEM_PROMPT,
 }
