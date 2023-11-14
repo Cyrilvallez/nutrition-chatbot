@@ -232,7 +232,7 @@ def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversation
         gr.Warning("The image you just uploaded does not depict food. We only allow images of meals or "
                    "beverages.")
         
-    return conversation, '', gradio_output, gradio_output
+    yield conversation, '', gradio_output, gradio_output
 
 
 
@@ -562,8 +562,12 @@ with demo:
                             inputs=inputs_to_callback, preprocess=False)
     
     # Load an image to the image component
+    # upload_event = upload_button.upload(upload_image, inputs=[upload_button, conversation, gradio_output],
+    #                                     outputs=[conversation, chatbot, gradio_output],
+    #                                     cancels=[generate_event1, generate_event2])
+
     upload_event = upload_button.upload(upload_image, inputs=[upload_button, conversation, gradio_output],
-                                        outputs=[conversation, chatbot, gradio_output],
+                                        outputs=[conversation, prompt, chatbot, gradio_output],
                                         cancels=[generate_event1, generate_event2])
     
     # Add automatic callback on success (args[-1] is the username)
