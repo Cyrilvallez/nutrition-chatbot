@@ -434,7 +434,7 @@ size = gr.Number(value=160, label='Size (cm)', precision=0, minimum=20, maximum=
 weight = gr.Number(value=56, label='Weight (kg)', precision=None, minimum=3, maximum=350, step=0.1)
 sex = gr.Radio(choices=['male', 'female'], value=None, label='Sex', scale=1)
 conditions = gr.Textbox(label='Special conditions', placeholder='E.g. diabetes, food allergy...', scale=3)
-validate_button = gr.Button('Valide answers', variant='primary')
+validate_button = gr.Button('Validate answers', variant='primary')
 
 
 # State variable to keep one conversation per session (default value does not matter here -> it will be set
