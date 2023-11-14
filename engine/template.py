@@ -73,8 +73,8 @@ LLAMA2_NUTRITION_SYSTEM_PROMPT = (
 
 
 CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = (
-    "\n\nIn particular, you are giving advice to a {sex} of {age} years old, who weights {weight} kilograms and "
-    "measures {size} centimeters. {optional_medical_conditions}Tailor your answer to this specific person."
+    "\n\nIn particular, you know you are speaking to a {sex} of {age} years old, who weights {weight} kilograms and "
+    "measures {size} centimeters. {optional_medical_conditions}Use this information to personalize your answers."
 )
 
 
