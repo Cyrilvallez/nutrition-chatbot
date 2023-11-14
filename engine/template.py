@@ -128,6 +128,8 @@ MISTRAL_NUTRITION_SYSTEM_PROMPT = (
     "Always answer by going straight to the point, and do not repeat yourself in the conversation."
 )
 
+
+
 class FewShotIdeficsTemplate(object):
 
     def __init__(self, shots: int | None = None, instruct: bool = False,

@@ -15,6 +15,7 @@ def main(model_name):
         conv = model.get_empty_conversation()
         prompt = sample['Questions']
         answer = model.generate_conversation(prompt, conv_history=conv, max_new_tokens=1024)
+        answer = answer.model_history_text[-1]
         completions.append({**sample, 'answer': answer})
 
     utils.save_jsonl(completions, f'nutri_questions_{model_name}.jsonl')
