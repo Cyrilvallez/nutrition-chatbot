@@ -79,8 +79,8 @@ LLAMA2_CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = LLAMA2_NUTRITION_SYSTEM_PROMPT + (
 LLAMA2_USER_TRANSITION = (
     "Here is the description of an image, along with an estimation of the amount of calories of the meal. Please "
     "act as if I just gave you the image, and you actually understood, described, and estimated the "
-    "ingredients and calories yourself. Do NOT try to compute a new calorie estimation, nor the size of the "
-    "ingredients.\nDESCRIPTION:\n{description}"
+    "ingredients and calories yourself. Do NOT try to estimate the size of the "
+    "ingredients.\nMEAL DESCRIPTION:\n{description}"
 )
 
 # LLAMA2_MODEL_TRANSITION = (
