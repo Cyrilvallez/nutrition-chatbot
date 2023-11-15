@@ -16,12 +16,12 @@ from helpers import utils
 
 # Load both models at the beginning
 IDEFICS_VERSION = 'idefics-9B'
-IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0) if torch.cuda.is_available() else DummyModel()
+IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0)
 
 # MODEL_VERSION = 'llama2-13B-chat'
 # MODEL_VERSION = 'mistral-7B-instruct'
 MODEL_VERSION = 'zephyr-7B-beta'
-MODEL = ChatModel(MODEL_VERSION, gpu_rank=1) if torch.cuda.is_available() else DummyModel()
+MODEL = ChatModel(MODEL_VERSION, gpu_rank=1)
 
 # File where the valid credentials are stored
 CREDENTIALS_FILE = os.path.join(utils.ROOT_FOLDER, '.gradio_login.txt')
@@ -74,12 +74,6 @@ def chat_generation(conversation: GenericConversationTemplate, gradio_output: li
     """
 
     timeout = 20
-
-    if not torch.cuda.is_available():
-        out = MODEL.generate_conversation(prompt, conv_history=conversation)
-        gradio_output.append(conversation.get_last_turn())
-        print(gradio_output)
-        return conversation, '', gradio_output, gradio_output
 
     # To show text as it is being generated
     streamer = TextIteratorStreamer(MODEL.tokenizer, skip_prompt=True, timeout=timeout, skip_special_tokens=True)
@@ -158,8 +152,7 @@ def continue_generation(conversation: GenericConversationTemplate, gradio_output
     """
 
     # If we just uploaded an image, do nothing
-    if conversation.user_history_text[-1].startswith(USER_TRANSITION) and \
-        conversation.model_history_text[-1].startswith(MODEL_TRANSITION):
+    if conversation.user_history_text[-1].startswith(USER_TRANSITION):
         return conversation, gradio_output, gradio_output
    
     timeout = 20
@@ -220,7 +213,7 @@ def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversation
         Corresponds to the tuple of components (conversation, chatbot, gradio_output)
     """
 
-    image = Image.open(file.name). convert('RGB')
+    image = Image.open(file.name).convert('RGB')
 
     try:
         out = IDEFICS.process_image(image)
