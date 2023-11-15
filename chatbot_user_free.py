@@ -143,7 +143,8 @@ def continue_generation(conversation: GenericConversationTemplate, gradio_output
 
     # If we just uploaded an image, do nothing
     if conversation.user_history_text[-1].startswith(USER_TRANSITION):
-        return conversation, gradio_output, gradio_output
+        yield conversation, gradio_output
+        return
    
     timeout = 20
 
