@@ -465,9 +465,7 @@ class GenericConversationTemplate(object):
         if len(self) == 0:
             return [[None, None]]
 
-        # Do not show the "syntetic" conversation turns (fake turns that we use to add context)
-        return [list(conv_turn) for conv_turn in self if not (conv_turn[0].startswith(USER_TRANSITION)
-                                                              and conv_turn[1].startswith(MODEL_TRANSITION))]
+        return [list(conv_turn) for conv_turn in self]
 
 
 # reference: https://github.com/facebookresearch/llama/blob/1a240688810f8036049e8da36b073f63d2ac552c/llama/generation.py#L212
