@@ -452,9 +452,8 @@ with demo:
                                             outputs=[conversation, chatbot])
     
     # Load an image to the image component
-    upload_event = upload_button.upload(upload_image, inputs=[upload_button, conversation,],
-                                        outputs=[conversation, chatbot],
-                                        cancels=[generate_event1, generate_event2])
+    upload_event = upload_button.upload(upload_image, inputs=[upload_button, conversation, chatbot],
+                                        outputs=[conversation, chatbot], cancels=[generate_event1, generate_event2])
     
     # Clear the chatbot box when clicking the button
     clear_button.click(clear_chatbot, inputs=[medical_conditions], outputs=[conversation, chatbot], queue=False)
