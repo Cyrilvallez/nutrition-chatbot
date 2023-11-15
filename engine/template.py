@@ -62,58 +62,6 @@ LLAMA2_NUTRITION_SYSTEM_PROMPT = (
     "and do not repeat yourself in the conversation."
 )
 
-# LLAMA2_NUTRITION_SYSTEM_PROMPT = (
-#     "You are NutriBot, a helpful, honest and highly-trained nutritionist assistant. You provide advices to people on food "
-#     "and nutrition, and how they impact health. You try to improve their lives by providing healthy food solutions "
-#     "and recipes. You are able to understand food images. If you have access to image descriptions, always act as "
-#     "if you actually understood, described, and estimated whatever is on the image yourself.\n\n"
-#     "Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. "
-#     "Always answer by going straight to the point, and do not repeat yourself in the conversation."
-# )
-
-
-CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = (
-    "\n\nIn particular, you know you are speaking to a {sex} of {age} years old, who weights {weight} kilograms and "
-    "measures {size} centimeters (that is a BMI of {BMI}). {optional_medical_conditions}Use this information to "
-    "personalize your answers, and never ask for new personal informations."
-)
-
-
-# USER_TRANSITION = (
-#     "I am going to describe an image of food or beverage to you that I just uploaded. Please take it into account "
-#     "for all my subsequent requests. Here is the description, along with an estimation of the amount of calories "
-#     "of the meal:\n"
-# )
-
-
-# USER_TRANSITION = (
-#     "Here is the description of an image of food, along with an estimation of the amount of calories of the meal. Please "
-#     "act as if I just gave you the image, and you actually understood, described, and estimated the "
-#     "ingredients and calories yourself. Do NOT try to estimate the size of the "
-#     "ingredients.\nDESCRIPTION:\n{description}"
-# )
-
-# USER_TRANSITION = (
-#     "Here is the description of an image:\nDESCRIPTION:\n{description}"
-# )
-
-
-USER_TRANSITION = (
-    "I just uploaded an image of food to your image recognition system. Can you tell me what is the meal "
-    "or beverage in the picture?"
-)
-
-
-# MODEL_TRANSITION = (
-#     "Thank you for the description of the image you just uploaded. What can I do for you concerning the meal "
-#     "on the image?"
-# )
-
-MODEL_TRANSITION = (
-    "Thank you for the image you just uploaded! From what I can see, it looks like {meal}. I recognized the following "
-    "ingredients: {ingredients}. I estimate that a portion should be about {calories} kcal."
-)
-
 
 MISTRAL_DEFAULT_SYSTEM_PROMPT = (
     "Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, "
@@ -127,6 +75,25 @@ MISTRAL_NUTRITION_SYSTEM_PROMPT = (
     "and recipes. Always assist with care, respect, and truth. Respond with utmost utility yet securely. "
     "Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity. "
     "Always answer by going straight to the point, and do not repeat yourself in the conversation."
+)
+
+
+CUSTOMIZED_NUTRITION_SYSTEM_PROMPT = (
+    "\n\nIn particular, you know you are speaking to a {sex} of {age} years old, who weights {weight} kilograms and "
+    "measures {size} centimeters (that is a BMI of {BMI}). {optional_medical_conditions}Use this information to "
+    "personalize your answers, and never ask for new personal informations."
+)
+
+
+USER_TRANSITION = (
+    "I just uploaded an image of food to your image recognition system. Can you tell me what is the meal "
+    "or beverage in the picture?"
+)
+
+
+MODEL_TRANSITION = (
+    "Thank you for the image you just uploaded! From what I can see, it looks like {meal}. I recognized the following "
+    "ingredients: {ingredients}. I estimate that a portion should be about {calories} kcal."
 )
 
 
@@ -584,7 +551,7 @@ class MistralConversationTemplate(GenericConversationTemplate):
         return prompt
     
 
-# reference: https://docs.mistral.ai/usage/guardrailing/
+# reference: https://huggingface.co/HuggingFaceH4/zephyr-7b-beta
 class ZephyrConversationTemplate(GenericConversationTemplate):
 
     def __init__(self, eos_token: str = '</s>', system_prompt: str = MISTRAL_NUTRITION_SYSTEM_PROMPT):
