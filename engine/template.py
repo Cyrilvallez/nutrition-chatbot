@@ -8,15 +8,15 @@ from PIL import Image
 from helpers import utils
 
 # Path to the image folder
-IMAGE_FOLDER = os.path.join(utils.ROOT_FOLDER, 'few_shot_images')
+FEW_SHOT_FOLDER = os.path.join(utils.IMAGE_FOLDER, 'few_shot_images')
 
 FEW_SHOT_IMAGES = (
-    Image.open(os.path.join(IMAGE_FOLDER, 'burger.jpeg')),
-    Image.open(os.path.join(IMAGE_FOLDER, 'pizza.jpeg')),
-    Image.open(os.path.join(IMAGE_FOLDER, 'mountain.jpeg')),
-    Image.open(os.path.join(IMAGE_FOLDER, 'fondue.jpeg')),
-    Image.open(os.path.join(IMAGE_FOLDER, 'tahiti.jpeg')),
-    Image.open(os.path.join(IMAGE_FOLDER, 'rice.jpeg')),
+    Image.open(os.path.join(FEW_SHOT_FOLDER, 'burger.jpeg')),
+    Image.open(os.path.join(FEW_SHOT_FOLDER, 'pizza.jpeg')),
+    Image.open(os.path.join(FEW_SHOT_FOLDER, 'mountain.jpeg')),
+    Image.open(os.path.join(FEW_SHOT_FOLDER, 'fondue.jpeg')),
+    Image.open(os.path.join(FEW_SHOT_FOLDER, 'tahiti.jpeg')),
+    Image.open(os.path.join(FEW_SHOT_FOLDER, 'rice.jpeg')),
 )
 
 FEW_SHOT_INSTRUCTION = ("Does the image represent human food? Only answer by 'Yes' or 'No'. If your answer is "

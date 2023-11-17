@@ -37,7 +37,7 @@ CACHED_QUESTION_ANSWERS = {}
 LOGGERS = {}
 
 # Path to NutriBot thumbnail
-THUMBNAIL = os.path.join(utils.ROOT_FOLDER, 'avatars', 'nutribot_cropped.png')
+THUMBNAIL = os.path.join(utils.IMAGE_FOLDER, 'avatars', 'nutribot_cropped.png')
 
 
 def chat_generation(conversation: GenericConversationTemplate, gradio_output: list[list], prompt: str,

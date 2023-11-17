@@ -5,7 +5,7 @@ import pandas as pd
 
 from helpers import utils
 
-MEAL_DATASET = os.path.join(utils.ROOT_FOLDER, 'test_images', 'meals')
+MEAL_DATASET = os.path.join(utils.IMAGE_FOLDER, 'meals')
 
 class ImageDataset(object):
     

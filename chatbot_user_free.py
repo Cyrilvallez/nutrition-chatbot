@@ -23,11 +23,8 @@ IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0)
 MODEL_VERSION = 'zephyr-7B-beta'
 MODEL = ChatModel(MODEL_VERSION, gpu_rank=1)
 
-# File where the valid credentials are stored
-CREDENTIALS_FILE = os.path.join(utils.ROOT_FOLDER, '.gradio_login.txt')
-
 # Path to NutriBot thumbnail
-THUMBNAIL = os.path.join(utils.ROOT_FOLDER, 'avatars', 'nutribot_cropped.png')
+THUMBNAIL = os.path.join(utils.IMAGE_FOLDER, 'avatars', 'nutribot_cropped.png')
 
 
 def chat_generation(conversation: GenericConversationTemplate, gradio_output: list[list], prompt: str,
@@ -401,7 +398,7 @@ with demo:
                 """
                 )
     
-    # Fake column to group the initial questions UI inside a single entity to eqsily activate/deactivate visibility
+    # Fake column to group the initial questions UI inside a single entity to easily activate/deactivate visibility
     with initial_ui.render():
         gr.Markdown("### To start with the chatbot, please begin by answering the following questions for a better and more customized service:")
         # Initial questions

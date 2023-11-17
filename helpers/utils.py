@@ -11,6 +11,9 @@ from PIL import Image
 # Path to the root of the project
 ROOT_FOLDER = os.path.dirname(os.path.dirname(__file__))
 
+# Path to the image folder
+IMAGE_FOLDER = os.path.join(ROOT_FOLDER, 'images')
+
 # Most frequent text/data file extensions
 FREQUENT_EXTENSIONS = (
     'json',
