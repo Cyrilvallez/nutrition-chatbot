@@ -14,6 +14,12 @@ ROOT_FOLDER = os.path.dirname(os.path.dirname(__file__))
 # Path to the image folder
 IMAGE_FOLDER = os.path.join(ROOT_FOLDER, 'images')
 
+# Path to the data folder
+DATA_FOLDER = os.path.join(ROOT_FOLDER, 'data')
+
+# Path to the results folder
+RESULT_FOLDER = os.path.join(ROOT_FOLDER, 'results')
+
 # Most frequent text/data file extensions
 FREQUENT_EXTENSIONS = (
     'json',

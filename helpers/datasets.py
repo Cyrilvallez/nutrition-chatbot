@@ -42,7 +42,7 @@ class NutriQuestions(object):
 
     def __init__(self):
 
-        self.path = os.path.join(utils.ROOT_FOLDER, 'data', 'nutri_questions.xlsx')
+        self.path = os.path.join(utils.DATA_FOLDER, 'nutri_questions.xlsx')
         self.data = pd.read_excel(self.path).to_dict(orient='records')
 
     def __len__(self) -> int:

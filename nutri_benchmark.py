@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from engine import ChatModel
 from helpers import datasets
@@ -18,7 +19,7 @@ def main(model_name):
         answer = answer.model_history_text[-1]
         completions.append({**sample, 'answer': answer})
 
-    utils.save_jsonl(completions, f'nutri_questions_{model_name}.jsonl')
+    utils.save_jsonl(completions, os.path.join(utils.RESULT_FOLDER, f'nutri_questions_{model_name}.jsonl'))
 
 
 if __name__ == '__main__':
