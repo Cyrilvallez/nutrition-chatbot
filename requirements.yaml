@@ -1,4 +1,4 @@
-name: llm
+name: nutrition-chatbot
 channels:
   - nvidia # need to specify this as first channel to go grab the dependencies of pytorch-cuda correctly
   - conda-forge
