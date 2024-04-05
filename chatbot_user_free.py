@@ -324,7 +324,7 @@ temperature = gr.Slider(0, 1, value=0.8, step=0.01, label='Temperature',
 
 
 # Define elements of the chatbot
-prompt = gr.Textbox(placeholder='Write your prompt here.', label='Prompt', lines=2)
+prompt = gr.Textbox(placeholder='Write your prompt here.', label='Prompt', lines=1)
 chatbot = gr.Chatbot(label='NutriBot', height=500, avatar_images=(None, THUMBNAIL))
 generate_button = gr.Button('▶️ Submit', variant='primary')
 continue_button = gr.Button('🔂 Continue last answer', variant='primary')
@@ -445,8 +445,8 @@ with demo:
                           outputs=[conversation, medical_conditions, initial_ui, main_ui], queue=False, concurrency_limit=None)
 
     # Perform chat generation when clicking the button
-    generate_event1 = generate_button.click(chat_generation, inputs=inputs_to_generation,
-                                            outputs=[conversation, prompt, chatbot], concurrency_id='generation')
+    generate_event1 = gr.on(triggers=[generate_button.click, prompt.submit], fn=chat_generation, inputs=inputs_to_generation,
+                            outputs=[conversation, prompt, chatbot], concurrency_id='generation')
     
     # Continue generation when clicking the button
     generate_event2 = continue_button.click(continue_generation, inputs=inputs_to_continuation,
