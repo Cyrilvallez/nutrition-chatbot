@@ -14,6 +14,9 @@ from engine.model import DummyModel
 from engine.template import USER_TRANSITION, MODEL_TRANSITION, parse_idefics_output, get_custom_system_prompt, get_fake_turn
 from helpers import utils
 
+# Disable analytics (can be set to anything except True really, we set it to False for readability)
+os.environ['GRADIO_ANALYTICS_ENABLED'] = 'False'
+
 # Load both models at the beginning
 IDEFICS_VERSION = 'idefics-9B'
 IDEFICS = IdeficsModel(IDEFICS_VERSION, gpu_rank=0)
@@ -439,27 +442,29 @@ with demo:
 
     # Validate the initial questions
     validate_button.click(validate_questions, inputs=[conversation, *inputs_to_questions],
-                          outputs=[conversation, medical_conditions, initial_ui, main_ui], queue=False)
+                          outputs=[conversation, medical_conditions, initial_ui, main_ui], queue=False, concurrency_limit=None)
 
     # Perform chat generation when clicking the button
     generate_event1 = generate_button.click(chat_generation, inputs=inputs_to_generation,
-                                            outputs=[conversation, prompt, chatbot])
+                                            outputs=[conversation, prompt, chatbot], concurrency_id='generation')
     
     # Continue generation when clicking the button
     generate_event2 = continue_button.click(continue_generation, inputs=inputs_to_continuation,
-                                            outputs=[conversation, chatbot])
+                                            outputs=[conversation, chatbot], concurrency_id='generation')
     
     # Load an image to the image component
     upload_event = upload_button.upload(upload_image, inputs=[upload_button, conversation, chatbot],
                                         outputs=[conversation, chatbot], cancels=[generate_event1, generate_event2])
     
     # Clear the chatbot box when clicking the button
-    clear_button.click(clear_chatbot, inputs=[medical_conditions], outputs=[conversation, chatbot], queue=False)
+    clear_button.click(clear_chatbot, inputs=[medical_conditions], outputs=[conversation, chatbot], queue=False,
+                       concurrency_limit=None)
     
     # Change visibility of generation parameters if we perform greedy search
     do_sample.input(lambda value: [gr.update(visible=value) for _ in range(3)], inputs=do_sample,
-                    outputs=[top_k, top_p, temperature], queue=False)
+                    outputs=[top_k, top_p, temperature], queue=False, concurrency_limit=None)
 
 
 if __name__ == '__main__':
-    demo.queue(concurrency_count=4).launch(share=False, server_port=7875, favicon_path='https://ai-forge.ch/favicon.ico')
+    demo.queue(default_concurrency_limit=4).launch(server_name='127.0.0.1', server_port=7875,
+                                                   favicon_path='https://ai-forge.ch/favicon.ico')
