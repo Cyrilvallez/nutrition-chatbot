@@ -204,8 +204,8 @@ def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversation
         Corresponds to the tuple of components (conversation, chatbot)
     """
 
-    # image = Image.open(file.name).convert('RGB')
-    image = Image.open(file).convert('RGB')
+    image = Image.open(file.name).convert('RGB')
+    # image = Image.open(file).convert('RGB')
 
     try:
         out = IDEFICS.process_image(image)
