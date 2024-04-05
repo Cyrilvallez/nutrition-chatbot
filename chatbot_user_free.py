@@ -462,4 +462,4 @@ with demo:
 
 
 if __name__ == '__main__':
-    demo.queue(concurrency_count=4).launch(share=True)
+    demo.queue(concurrency_count=4).launch(share=False, server_port=7875, favicon_path='https://ai-forge.ch/favicon.ico')
