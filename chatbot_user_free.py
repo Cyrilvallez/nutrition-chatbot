@@ -205,7 +205,6 @@ def upload_image(file: tempfile.TemporaryFile, conversation: GenericConversation
     """
 
     image = Image.open(file.name).convert('RGB')
-    # image = Image.open(file).convert('RGB')
 
     try:
         out = IDEFICS.process_image(image)
