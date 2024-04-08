@@ -466,5 +466,5 @@ with demo:
 
 
 if __name__ == '__main__':
-    demo.queue(default_concurrency_limit=4).launch(server_name='127.0.0.1', server_port=7875,
+    demo.queue(default_concurrency_limit=4).launch(share=True, server_name='127.0.0.1', server_port=7875,
                                                    favicon_path='https://ai-forge.ch/favicon.ico')
