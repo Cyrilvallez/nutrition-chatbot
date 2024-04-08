@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=nutrition-chatbot
+#SBATCH --job-name=test
 #SBATCH --output=%x-%j.out
 #SBATCH --error=%x-%j.err
 #SBATCH --time=10-00:00:00
@@ -17,6 +17,6 @@ eval "$(conda shell.bash hook)"
 conda activate nutrition-chatbot
 
 ../frp_server/frp_0.54.0_linux_amd64/frpc -c ../frp_server/frpc/frpc_nutribot.toml &
-python3 -u chatbot_user_free.py
+python3 -u test.py
 
 conda deactivate
