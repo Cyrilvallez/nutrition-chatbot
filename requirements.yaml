@@ -16,7 +16,6 @@ dependencies:
     - transformers==4.35.1
     - tokenizers==0.14.1
     - accelerate==0.22.0
-    - huggingface-hub==0.16.4
     - optimum==1.12.0
     - gradio==4.8.0
     - bitsandbytes==0.41.1
